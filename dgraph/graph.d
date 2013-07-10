@@ -1,3 +1,28 @@
+// Written in the D programming language.
+
+/**
+  Basic graph data structures.
+
+  Authors:   $(LINK2 http://braingam.es/, Joseph Rushton Wakeling)
+  Copyright: Copyright © 2013 Joseph Rushton Wakeling
+  License:   This program is free software: you can redistribute it and/or modify
+             it under the terms of the GNU General Public License as published by
+             the Free Software Foundation, either version 3 of the License, or
+             (at your option) any later version.
+
+             This program is distributed in the hope that it will be useful,
+             but WITHOUT ANY WARRANTY; without even the implied warranty of
+             MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+             GNU General Public License for more details.
+
+             You should have received a copy of the GNU General Public License
+             along with this program.  If not, see $(LINK http://www.gnu.org/licenses/).
+
+  Credits:   The basic graph data structure used here is adapted from the library
+             $(LINK2 http://igraph.sourceforge.net/, igraph) by Gábor Csárdi and
+             Tamás Nepusz.
+*/
+
 module dgraph.graph;
 
 import std.algorithm, std.conv, std.range;
