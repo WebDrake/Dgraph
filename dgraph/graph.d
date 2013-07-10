@@ -37,31 +37,50 @@ final class Graph(bool dir)
             return (_sumHead[v + 1] - _sumHead[v])
                  + (_sumTail[v + 1] - _sumTail[v]);
         }
-    }
 
-    size_t degreeIn(immutable size_t v)
+        alias degreeIn = degree;
+        alias degreeOut = degree;
+    }
+    else
     {
-        static if (directed)
+        size_t degreeIn(immutable size_t v)
         {
             return _sumTail[v + 1] - _sumTail[v];
         }
-        else
-        {
-            return degree(v);
-        }
-    }
 
-    size_t degreeOut(immutable size_t v)
-    {
-        static if (directed)
+        size_t degreeOut(immutable size_t v)
         {
             return _sumHead[v + 1] - _sumHead[v];
         }
-        else
+    }
+
+    static if (!directed)
+    {
+        auto neighbours(immutable size_t v)
         {
-            return degree(v);
+            return chain(map!(a => _tail[_indexHead[a]])(iota(_sumHead[v], _sumHead[v + 1])),
+                         map!(a => _head[_indexTail[a]])(iota(_sumTail[v], _sumTail[v + 1])));
+        }
+
+        alias neighbors = neighbours;
+        alias neighboursIn  = neighbours;
+        alias neighboursOut = neighbours;
+    }
+    else
+    {
+        auto neighboursIn(immutable size_t v)
+        {
+            return map!(a => _head[_indexTail[a]])(iota(_sumTail[v], _sumTail[v + 1]));
+        }
+
+        auto neighboursOut(immutable size_t v)
+        {
+            return map!(a => _tail[_indexHead[a]])(iota(_sumHead[v], _sumHead[v + 1]));
         }
     }
+
+    alias neighborsIn = neighboursIn;
+    alias neighborsOut = neighboursOut;
 
     void addVertices(immutable size_t n)
     {
@@ -117,7 +136,7 @@ unittest
     writeln(g1._sumTail);
     foreach(v; iota(g1.vertexCount))
     {
-        writeln("\td(", v, ") =\t", g1.degree(v));
+        writeln("\td(", v, ") =\t", g1.degree(v), "\tn(", v, ") = ", g1.neighbours(v));
     }
     writeln;
     assert(isSorted(map!(a => g1._head[g1._indexHead[a]])(iota(g1._head.length))));
@@ -137,7 +156,8 @@ unittest
     writeln(g2._sumTail);
     foreach(v; iota(g2.vertexCount))
     {
-        writeln("\td_out(", v, ") =\t", g2.degreeOut(v), "\td_in(", v, ") =\t", g2.degreeIn(v));
+        writeln("\td_out(", v, ") =\t", g2.degreeOut(v), "\tn_out(", v, ") = ", g2.neighboursOut(v),
+                "\td_in(", v, ") =\t", g2.degreeIn(v), "\tn_in(", v, ") = ", g2.neighboursIn(v));
     }
     assert(isSorted(map!(a => g2._head[g2._indexHead[a]])(iota(g2._head.length))));
 }
