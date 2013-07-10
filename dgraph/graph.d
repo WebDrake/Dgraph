@@ -1,6 +1,6 @@
 module dgraph.graph;
 
-import std.algorithm, std.exception, std.range;
+import std.algorithm, std.conv, std.range;
 
 final class Graph(bool dir)
 {
@@ -94,8 +94,8 @@ final class Graph(bool dir)
 
     void addEdge(size_t head, size_t tail)
     {
-        enforce(head < this.vertexCount);
-        enforce(tail < this.vertexCount);
+        assert(head < this.vertexCount, text("Edge head ", head, " is greater than vertex count ", this.vertexCount));
+        assert(tail < this.vertexCount, text("Edge tail ", tail, " is greater than vertex count ", this.vertexCount));
         static if (!directed)
         {
             if (tail < head)
