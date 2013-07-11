@@ -1,5 +1,5 @@
 DC = gdmd
-DFLAGS = -O -release -inline
+DFLAGS = -O -inline
 LIBSRC = dgraph/*.d
 PROGS = graph50
 
