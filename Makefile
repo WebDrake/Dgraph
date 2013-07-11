@@ -1,7 +1,7 @@
 DC = gdmd
 DFLAGS = -O -inline
-LIBSRC = dgraph/*.d
-PROGS = graph50
+LIBSRC = dgraph/*.d dgraph/test/*.d
+PROGS = graphtest
 
 all: $(PROGS)
 
