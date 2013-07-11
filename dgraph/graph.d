@@ -42,8 +42,8 @@ final class Graph(bool dir)
         _indexHead ~= iota(_indexHead.length, _head.length).array;
         _indexTail ~= iota(_indexTail.length, _tail.length).array;
         assert(_indexHead.length == _indexTail.length);
-        schwartzSort!(a => _head[a], "a < b")(_indexHead);
-        schwartzSort!(a => _tail[a], "a < b")(_indexTail);
+        schwartzSort!(a => _head[a], "a < b", SwapStrategy.semistable)(_indexHead);
+        schwartzSort!(a => _tail[a], "a < b", SwapStrategy.semistable)(_indexTail);
     }
 
   public:
