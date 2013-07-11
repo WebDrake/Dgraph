@@ -49,16 +49,43 @@ final class Graph(bool dir)
   public:
     enum bool directed = dir;
 
+    auto edges() @property const pure nothrow
+    {
+        return zip(_head, _tail);
+    }
+
+    size_t edgeCount() @property const pure nothrow
+    {
+        assert(_head.length == _tail.length);
+        return _head.length;
+    }
+
     size_t vertexCount() @property const pure nothrow
     {
         assert(_sumHead.length == _sumTail.length);
         return _sumHead.length - 1;
     }
 
-    static if (!directed)
+    static if (directed)
     {
-        size_t degree(immutable size_t v)
+        size_t degreeIn(immutable size_t v) const pure nothrow
         {
+            assert(v + 1 < _sumTail.length);
+            return _sumTail[v + 1] - _sumTail[v];
+        }
+
+        size_t degreeOut(immutable size_t v) const pure nothrow
+        {
+            assert(v + 1 < _sumHead.length);
+            return _sumHead[v + 1] - _sumHead[v];
+        }
+    }
+    else
+    {
+        size_t degree(immutable size_t v) const pure nothrow
+        {
+            assert(v + 1 < _sumHead.length);
+            assert(_sumHead.length == _sumTail.length);
             return (_sumHead[v + 1] - _sumHead[v])
                  + (_sumTail[v + 1] - _sumTail[v]);
         }
@@ -66,22 +93,22 @@ final class Graph(bool dir)
         alias degreeIn = degree;
         alias degreeOut = degree;
     }
-    else
+
+    static if (directed)
     {
-        size_t degreeIn(immutable size_t v)
+        auto neighboursIn(immutable size_t v) const
         {
-            return _sumTail[v + 1] - _sumTail[v];
+            return map!(a => _head[_indexTail[a]])(iota(_sumTail[v], _sumTail[v + 1]));
         }
 
-        size_t degreeOut(immutable size_t v)
+        auto neighboursOut(immutable size_t v) const
         {
-            return _sumHead[v + 1] - _sumHead[v];
+            return map!(a => _tail[_indexHead[a]])(iota(_sumHead[v], _sumHead[v + 1]));
         }
     }
-
-    static if (!directed)
+    else
     {
-        auto neighbours(immutable size_t v)
+        auto neighbours(immutable size_t v) const
         {
             return chain(map!(a => _tail[_indexHead[a]])(iota(_sumHead[v], _sumHead[v + 1])),
                          map!(a => _head[_indexTail[a]])(iota(_sumTail[v], _sumTail[v + 1])));
@@ -91,25 +118,13 @@ final class Graph(bool dir)
         alias neighboursIn  = neighbours;
         alias neighboursOut = neighbours;
     }
-    else
-    {
-        auto neighboursIn(immutable size_t v)
-        {
-            return map!(a => _head[_indexTail[a]])(iota(_sumTail[v], _sumTail[v + 1]));
-        }
-
-        auto neighboursOut(immutable size_t v)
-        {
-            return map!(a => _tail[_indexHead[a]])(iota(_sumHead[v], _sumHead[v + 1]));
-        }
-    }
 
     alias neighborsIn = neighboursIn;
     alias neighborsOut = neighboursOut;
 
     void addVertices(immutable size_t n)
     {
-        size_t l = _sumHead.length;
+        immutable size_t l = _sumHead.length;
         _sumHead.length += n;
         _sumTail.length += n;
         assert(_sumHead.length == _sumTail.length);
@@ -135,11 +150,6 @@ final class Graph(bool dir)
         ++_sumHead[head + 1 .. $];
         ++_sumTail[tail + 1 .. $];
         indexEdges();
-    }
-
-    auto edges() @property pure
-    {
-        return zip(_head, _tail);
     }
 }
 
