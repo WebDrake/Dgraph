@@ -74,6 +74,57 @@ final class Graph(bool dir)
         return _sumHead.length - 1;
     }
 
+    bool isEdge(size_t head, size_t tail) const
+    {
+        assert(head < vertexCount);
+        assert(tail < vertexCount);
+        static if (!directed)
+        {
+            if (tail < head)
+            {
+                size_t tmp = head;
+                head = tail;
+                tail = tmp;
+            }
+        }
+
+        size_t headDeg = _sumHead[head + 1] - _sumHead[head];
+        if (headDeg == 0)
+        {
+            return false;
+        }
+
+        size_t tailDeg = _sumTail[tail + 1] - _sumTail[tail];
+        if (tailDeg == 0)
+        {
+            return false;
+        }
+        else if (headDeg < tailDeg)
+        {
+            // search among the tails of head
+            foreach (t; map!(a => _tail[_indexHead[a]])(iota(_sumHead[head], _sumHead[head + 1])))
+            {
+                if (t == tail)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+        else
+        {
+            // search among the heads of tail
+            foreach (h; map!(a => _head[_indexTail[a]])(iota(_sumTail[tail], _sumTail[tail + 1])))
+            {
+                if (h == head)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
     static if (directed)
     {
         size_t degreeIn(immutable size_t v) const pure nothrow
@@ -183,6 +234,23 @@ unittest
     }
     writeln;
     assert(isSorted(map!(a => g1._head[g1._indexHead[a]])(iota(g1._head.length))));
+    foreach (h; iota(10))
+    {
+        foreach (t; iota(10))
+        {
+            if ((h == 5 && t == 8) || (h == 8 && t == 5) ||
+                (h == 7 && t == 4) || (h == 4 && t == 7) ||
+                (h == 6 && t == 9) || (h == 9 && t == 6) ||
+                (h == 3 && t == 2) || (h == 2 && t == 3))
+            {
+                assert(g1.isEdge(h, t), text("isEdge failure for edge (", h, ", ", t, ")"));
+            }
+            else
+            {
+                assert(!g1.isEdge(h, t), text("isEdge false positive for edge (", h, ", ", t, ")"));
+            }
+        }
+    }
 
     auto g2 = new Graph!true;
     g2.addVertices(10);
@@ -203,4 +271,21 @@ unittest
                 "\td_in(", v, ") =\t", g2.degreeIn(v), "\tn_in(", v, ") = ", g2.neighboursIn(v));
     }
     assert(isSorted(map!(a => g2._head[g2._indexHead[a]])(iota(g2._head.length))));
+    foreach (h; iota(10))
+    {
+        foreach (t; iota(10))
+        {
+            if ((h == 5 && t == 8) ||
+                (h == 7 && t == 4) ||
+                (h == 6 && t == 9) ||
+                (h == 3 && t == 2))
+            {
+                assert(g2.isEdge(h, t), text("isEdge failure for edge (", h, ", ", t, ")"));
+            }
+            else
+            {
+                assert(!g2.isEdge(h, t), text("isEdge false positive for edge (", h, ", ", t, ")"));
+            }
+        }
+    }
 }
