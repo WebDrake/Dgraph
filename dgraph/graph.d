@@ -125,6 +125,54 @@ final class Graph(bool dir)
         }
     }
 
+    size_t edgeID(size_t head, size_t tail) const
+    {
+        assert(head < vertexCount);
+        assert(tail < vertexCount);
+        assert(isEdge(head, tail));
+        static if (!directed)
+        {
+            if (tail < head)
+            {
+                size_t tmp = head;
+                head = tail;
+                tail = tmp;
+            }
+        }
+
+        size_t headDeg = _sumHead[head + 1] - _sumHead[head];
+        size_t tailDeg = _sumTail[tail + 1] - _sumTail[tail];
+        assert(headDeg > 0);
+        assert(tailDeg > 0);
+
+        if (headDeg < tailDeg)
+        {
+            // search among the tails of head
+            foreach (i; map!(a => _indexHead[a])(iota(_sumHead[head], _sumHead[head + 1])))
+            {
+                if (_tail[i] == tail)
+                {
+                    assert(_head[i] == head);
+                    return i;
+                }
+            }
+            assert(false);
+        }
+        else
+        {
+            // search among the heads of tail
+            foreach (i; map!(a => _indexTail[a])(iota(_sumTail[tail], _sumTail[tail + 1])))
+            {
+                if (_head[i] == head)
+                {
+                    assert(_tail[i] == tail);
+                    return i;
+                }
+            }
+            assert(false);
+        }
+    }
+
     static if (directed)
     {
         size_t degreeIn(immutable size_t v) const pure nothrow
@@ -251,6 +299,13 @@ unittest
             }
         }
     }
+    foreach(i; 0 .. g1.edgeCount)
+    {
+        size_t h = g1._head[i];
+        size_t t = g1._tail[i];
+        assert(i == g1.edgeID(h, t));
+        assert(i == g1.edgeID(t, h));
+    }
 
     auto g2 = new Graph!true;
     g2.addVertices(10);
@@ -287,5 +342,11 @@ unittest
                 assert(!g2.isEdge(h, t), text("isEdge false positive for edge (", h, ", ", t, ")"));
             }
         }
+    }
+    foreach(i; 0 .. g2.edgeCount)
+    {
+        size_t h = g2._head[i];
+        size_t t = g2._tail[i];
+        assert(i == g2.edgeID(h, t));
     }
 }
