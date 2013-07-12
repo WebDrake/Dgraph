@@ -25,7 +25,7 @@
 
 module dgraph.graph;
 
-import std.algorithm, std.conv, std.range;
+import std.algorithm, std.array, std.conv, std.range;
 
 final class Graph(bool dir)
 {
@@ -39,11 +39,19 @@ final class Graph(bool dir)
 
     void indexEdges()
     {
-        _indexHead ~= iota(_indexHead.length, _head.length).array;
-        _indexTail ~= iota(_indexTail.length, _tail.length).array;
         assert(_indexHead.length == _indexTail.length);
-        schwartzSort!(a => _head[a], "a < b", SwapStrategy.semistable)(_indexHead);
-        schwartzSort!(a => _tail[a], "a < b", SwapStrategy.semistable)(_indexTail);
+        assert(_head.length == _tail.length);
+        immutable size_t l = _indexHead.length;
+        foreach(e; iota(l, _head.length))
+        {
+            size_t i = _indexHead.map!(a => _head[a]).assumeSorted.lowerBound(_head[e]).length;
+            insertInPlace(_indexHead, i, e);
+            i = _indexTail.map!(a => _tail[a]).assumeSorted.lowerBound(_tail[e]).length;
+            insertInPlace(_indexTail, i, e);
+        }
+        assert(_indexHead.length == _indexTail.length);
+        assert(_indexHead.length == _head.length, text(_indexHead.length, " head indices but ", _head.length, " head values."));
+        assert(_indexTail.length == _tail.length, text(_indexTail.length, " tail indices but ", _tail.length, " tail values."));
     }
 
   public:

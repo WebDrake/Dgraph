@@ -32,10 +32,10 @@ void main()
     writeln;
 
     writeln("First, a graph of 50 vertices, with edges added one at a time.");
-    writeln("This is quite quick, so we'll do it 10,001 times with the last");
+    writeln("This is quite quick, so we'll do it 100_001 times with the last");
     writeln("time being verbose.");
     watch.start;
-	foreach(i; 0 .. 10_000)
+	foreach(i; 0 .. 100_000)
     {
 		testAddEdge!(false, 0)(50, sampleGraph50);
     }
@@ -46,9 +46,13 @@ void main()
 
     writeln("Now let's try a much bigger graph of 10,000 vertices, again");
     writeln("with each edge being added one at a time.  Because it's bigger");
-    writeln("we'll only do it once, verbosely.");
+    writeln("we'll only do it 51 times, the last verbosely.");
     watch.reset;
     watch.start;
+    foreach(i; 0 .. 50)
+    {
+        testAddEdge!(false, 0)(10_000, sampleGraph10k);
+    }
     testAddEdge!(false, 1)(10_000, sampleGraph10k);
     watch.stop;
     writeln("Done in ", watch.peek.msecs, " ms.");
