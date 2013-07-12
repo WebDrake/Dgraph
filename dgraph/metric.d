@@ -80,12 +80,13 @@ auto betweenness(T = double, bool directed)(ref Graph!directed g, bool[] ignore)
     T[] delta = new T[g.vertexCount];
     long[] d = new long[g.vertexCount];
     auto q = VertexQueue(g.vertexCount);
+    size_t[][] p = new size_t[][g.vertexCount];
 
     foreach (s; 0 .. g.vertexCount)
     {
         if (!ignore[s])
         {
-            size_t[][] p = new size_t[][g.vertexCount];
+            p[] = [];
             size_t stackLength = 0;
             assert(q.empty);
             sigma[] = to!T(0);
