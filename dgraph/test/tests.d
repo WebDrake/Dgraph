@@ -21,6 +21,8 @@
 
 module dgraph.test.tests;
 
+import std.exception;
+
 import dgraph.graph;
 
 /**
@@ -79,5 +81,16 @@ void testAddEdge(bool directed = false, ushort verbose = 0)(immutable size_t v, 
                 }
             }
         }
+    }
+}
+
+/// Tests that the edgeID function returns correct values for all edges in the graph.
+void testEdgeID(bool directed)(ref Graph!directed g)
+{
+    foreach(i; 0 .. g.edgeCount)
+    {
+        auto edge = g.edge[i];
+        size_t id = g.edgeID(edge[0], edge[1]);
+        enforce(i == id, text("Edge ID failure for edge ", i, ": edgeID(", edge[0], ", ", edge[1], ") returns ", id));
     }
 }
