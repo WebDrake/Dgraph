@@ -50,7 +50,7 @@ void testAddEdge(bool directed = false, ushort verbose = 0)(immutable size_t v, 
             writeln("Undirected graph.");
         }
         writeln("Number of vertices: ", g.vertexCount);
-        writeln("Number of edges: ", g.edges.length);
+        writeln("Number of edges: ", g.edgeCount);
         static if (g.directed)
         {
             writeln("Incoming neighbours of vertex 0: ", g.neighboursIn(0));

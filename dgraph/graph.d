@@ -57,7 +57,7 @@ final class Graph(bool dir)
   public:
     enum bool directed = dir;
 
-    auto edges() @property const pure nothrow
+    auto edge() @property const pure nothrow
     {
         return zip(_head, _tail);
     }
@@ -264,7 +264,7 @@ unittest
     g1.addEdge(7, 4);
     g1.addEdge(6, 9);
     g1.addEdge(3, 2);
-    foreach(head, tail; g1.edges)
+    foreach(head, tail; g1.edge)
         writeln("\t", head, "\t", tail);
     writeln(g1._indexHead);
     writeln(g1._indexTail);
@@ -308,7 +308,7 @@ unittest
     g2.addEdge(7, 4);
     g2.addEdge(6, 9);
     g2.addEdge(3, 2);
-    foreach(head, tail; g2.edges)
+    foreach(head, tail; g2.edge)
         writeln("\t", head, "\t", tail);
     writeln(g2._indexHead);
     writeln(g2._indexTail);
