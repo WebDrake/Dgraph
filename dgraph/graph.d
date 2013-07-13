@@ -82,9 +82,7 @@ final class Graph(bool dir)
         {
             if (tail < head)
             {
-                size_t tmp = head;
-                head = tail;
-                tail = tmp;
+                swap(head, tail);
             }
         }
 
@@ -134,9 +132,7 @@ final class Graph(bool dir)
         {
             if (tail < head)
             {
-                size_t tmp = head;
-                head = tail;
-                tail = tmp;
+                swap(head, tail);
             }
         }
 
@@ -247,9 +243,7 @@ final class Graph(bool dir)
         {
             if (tail < head)
             {
-                size_t tmp = head;
-                head = tail;
-                tail = tmp;
+                swap(head, tail);
             }
         }
         _head ~= head;
