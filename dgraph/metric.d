@@ -109,11 +109,13 @@ auto betweenness(T = double, bool directed)(ref Graph!directed g, bool[] ignore)
                         {
                             q.push(w);
                             d[w] = d[v] + 1L;
+                            assert(sigma[w] == to!T(0));
+                            sigma[w] = sigma[v];
+                            p[w] ~= v;
                         }
-
-                        if (d[w] == (d[v] + 1L))
+                        else if (d[w] == (d[v] + 1L))
                         {
-                            sigma[w] = sigma[w] + sigma[v];
+                            sigma[w] += sigma[v];
                             p[w] ~= v;
                         }
                     }
@@ -122,17 +124,17 @@ auto betweenness(T = double, bool directed)(ref Graph!directed g, bool[] ignore)
 
             delta[] = to!T(0);
 
-            while(stackLength > 0)
+            while(stackLength > to!size_t(0))
             {
-                auto w = stack[stackLength-1];
                 --stackLength;
+                auto w = stack[stackLength];
                 foreach (v; p[w])
                 {
-                    delta[v] = delta[v] + ((sigma[v] / sigma[w]) * (to!T(1) + delta[w]));
+                    delta[v] += ((sigma[v] / sigma[w]) * (to!T(1) + delta[w]));
                 }
                 if (w != s)
                 {
-                    centrality[w] = centrality[w] + delta[w];
+                    centrality[w] += delta[w];
                 }
             }
         }
