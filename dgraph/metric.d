@@ -82,16 +82,17 @@ auto betweenness(T = double, bool directed)(ref Graph!directed g, bool[] ignore)
     auto q = VertexQueue(g.vertexCount);
     size_t[][] p = new size_t[][g.vertexCount];
 
+    sigma[] = to!T(0);
+    delta[] = to!T(0);
+    d[] = -1L;
+
     foreach (s; 0 .. g.vertexCount)
     {
         if (!ignore[s])
         {
-            p[] = [];
             size_t stackLength = 0;
             assert(q.empty);
-            sigma[] = to!T(0);
             sigma[s] = to!T(1);
-            d[] = -1L;
             d[s] = 0L;
             q.push(s);
 
@@ -111,7 +112,20 @@ auto betweenness(T = double, bool directed)(ref Graph!directed g, bool[] ignore)
                             d[w] = d[v] + 1L;
                             assert(sigma[w] == to!T(0));
                             sigma[w] = sigma[v];
-                            p[w] ~= v;
+                            p[w].length = 1;
+                            p[w][0] = v;
+                        }
+                        else if (d[w] > (d[v] + 1L))
+                        {
+                            /* w has already been encountered, but we've
+                               found a shorter path to the source.  This
+                               is probably only relevant to the weighted
+                               case, but let's keep it here in order to
+                               be ready for that update. */
+                            d[w] = d[v] + 1L;
+                            sigma[w] = sigma[v];
+                            p[w].length = 1;
+                            p[w][0] = v;
                         }
                         else if (d[w] == (d[v] + 1L))
                         {
@@ -121,8 +135,6 @@ auto betweenness(T = double, bool directed)(ref Graph!directed g, bool[] ignore)
                     }
                 }
             }
-
-            delta[] = to!T(0);
 
             while(stackLength > to!size_t(0))
             {
@@ -136,6 +148,9 @@ auto betweenness(T = double, bool directed)(ref Graph!directed g, bool[] ignore)
                 {
                     centrality[w] += delta[w];
                 }
+                sigma[w] = to!T(0);
+                delta[w] = to!T(0);
+                d[w] = -1L;
             }
         }
     }
