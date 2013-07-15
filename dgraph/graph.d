@@ -37,14 +37,14 @@ final class Graph(bool dir)
     size_t[] _sumHead = [0];
     size_t[] _sumTail = [0];
 
-    void indexEdges()
+    void indexEdgesInsertion()
     {
         assert(_indexHead.length == _indexTail.length);
         assert(_head.length == _tail.length);
         immutable size_t l = _indexHead.length;
         _indexHead.length = _head.length;
         _indexTail.length = _tail.length;
-        foreach(e; iota(l, _head.length))
+        foreach(e; l .. _head.length)
         {
             size_t i, j;
             i = _indexHead[0 .. e].map!(a => _head[a]).assumeSorted.lowerBound(_head[e]).length;
@@ -59,6 +59,30 @@ final class Graph(bool dir)
         assert(_indexHead.length == _indexTail.length);
         assert(_indexHead.length == _head.length, text(_indexHead.length, " head indices but ", _head.length, " head values."));
         assert(_indexTail.length == _tail.length, text(_indexTail.length, " tail indices but ", _tail.length, " tail values."));
+    }
+
+    void indexEdgesSort()
+    {
+        _indexHead ~= iota(_indexHead.length, _head.length).array;
+        _indexTail ~= iota(_indexTail.length, _tail.length).array;
+        assert(_indexHead.length == _indexTail.length);
+        _indexHead.schwartzSort!(a => _head[a], "a < b");
+        _indexTail.schwartzSort!(a => _tail[a], "a < b");
+    }
+
+    void sumEdges(ref size_t[] sum, ref size_t[] vertex, ref size_t[] index)
+    {
+        assert(sum.length > 1);
+
+        size_t v = vertex[index[0]];
+        sum[0 .. v + 1] = 0;
+        for(size_t i = 1; i < index.length; ++i)
+        {
+            size_t n = vertex[index[i]] - vertex[index[sum[v]]];
+            sum[v + 1 .. v + n + 1] = i;
+            v += n;
+        }
+        sum[v + 1 .. $] = vertex.length;
     }
 
   public:
@@ -255,9 +279,9 @@ final class Graph(bool dir)
         }
         _head ~= head;
         _tail ~= tail;
+        indexEdgesInsertion();
         ++_sumHead[head + 1 .. $];
         ++_sumTail[tail + 1 .. $];
-        indexEdges();
     }
 
     void addEdge(T : size_t)(T[] edgeList)
@@ -282,10 +306,10 @@ final class Graph(bool dir)
             }
             _head[l + i] = head;
             _tail[l + i] = tail;
-            ++_sumHead[head + 1 .. $];
-            ++_sumTail[tail + 1 .. $];
         }
-        indexEdges();
+        indexEdgesSort();
+        sumEdges(_sumHead, _head, _indexHead);
+        sumEdges(_sumTail, _tail, _indexTail);
     }
 }
 
@@ -295,10 +319,11 @@ unittest
     auto g1 = new Graph!false;
     g1.addVertices(10);
     assert(g1.vertexCount == 10);
-    g1.addEdge(5, 8);
+/*    g1.addEdge(5, 8);
     g1.addEdge(7, 4);
     g1.addEdge(6, 9);
-    g1.addEdge(3, 2);
+    g1.addEdge(3, 2);*/
+    g1.addEdge([5, 8, 7, 4, 6, 9, 3, 2]);
     foreach(head, tail; g1.edge)
         writeln("\t", head, "\t", tail);
     writeln(g1._indexHead);
@@ -339,10 +364,11 @@ unittest
     auto g2 = new Graph!true;
     g2.addVertices(10);
     assert(g2.vertexCount == 10);
-    g2.addEdge(5, 8);
+/*    g2.addEdge(5, 8);
     g2.addEdge(7, 4);
     g2.addEdge(6, 9);
-    g2.addEdge(3, 2);
+    g2.addEdge(3, 2);*/
+    g2.addEdge([5, 8, 7, 4, 6, 9, 3, 2]);
     foreach(head, tail; g2.edge)
         writeln("\t", head, "\t", tail);
     writeln(g2._indexHead);

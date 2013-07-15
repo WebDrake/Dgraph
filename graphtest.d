@@ -46,10 +46,10 @@ void main()
 
     writeln("Now let's try a much bigger graph of 10,000 vertices, again");
     writeln("with each edge being added one at a time.  Because it's bigger");
-    writeln("we'll only do it 51 times, the last verbosely.");
+    writeln("we'll only do it 1001 times, the last verbosely.");
     watch.reset;
     watch.start;
-    foreach(i; 0 .. 50)
+    foreach(i; 0 .. 1_000)
     {
         testAddEdge!(true, false, 0)(10_000, sampleGraph10k);
     }
