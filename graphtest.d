@@ -37,9 +37,9 @@ void main()
     watch.start;
 	foreach(i; 0 .. 100_000)
     {
-		testAddEdge!(false, 0)(50, sampleGraph50);
+		testAddEdge!(true, false, 0)(50, sampleGraph50);
     }
-    testAddEdge!(false, 1)(50, sampleGraph50);
+    testAddEdge!(true, false, 1)(50, sampleGraph50);
     watch.stop;
     writeln("Done in ", watch.peek.msecs, " ms.");
     writeln;
@@ -51,9 +51,9 @@ void main()
     watch.start;
     foreach(i; 0 .. 50)
     {
-        testAddEdge!(false, 0)(10_000, sampleGraph10k);
+        testAddEdge!(true, false, 0)(10_000, sampleGraph10k);
     }
-    testAddEdge!(false, 1)(10_000, sampleGraph10k);
+    testAddEdge!(true, false, 1)(10_000, sampleGraph10k);
     watch.stop;
     writeln("Done in ", watch.peek.msecs, " ms.");
 }

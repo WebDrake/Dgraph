@@ -235,7 +235,7 @@ final class Graph(bool dir)
         _sumTail[l .. $] = _sumTail[l - 1];
     }
 
-    void addEdge(size_t head, size_t tail)
+    void addEdge()(size_t head, size_t tail)
     {
         assert(head < this.vertexCount, text("Edge head ", head, " is greater than vertex count ", this.vertexCount));
         assert(tail < this.vertexCount, text("Edge tail ", tail, " is greater than vertex count ", this.vertexCount));
@@ -250,6 +250,34 @@ final class Graph(bool dir)
         _tail ~= tail;
         ++_sumHead[head + 1 .. $];
         ++_sumTail[tail + 1 .. $];
+        indexEdges();
+    }
+
+    void addEdge(T : size_t)(T[] edgeList)
+    {
+        assert(edgeList.length % 2 == 0);
+        assert(_head.length == _tail.length);
+        immutable size_t l = _head.length;
+        _head.length += edgeList.length / 2;
+        _tail.length += edgeList.length / 2;
+        foreach(i; 0 .. edgeList.length / 2)
+        {
+            size_t head = edgeList[2 * i];
+            size_t tail = edgeList[2 * i + 1];
+            assert(head < this.vertexCount, text("Edge head ", head, " is greater than vertex count ", this.vertexCount));
+            assert(tail < this.vertexCount, text("Edge tail ", tail, " is greater than vertex count ", this.vertexCount));
+            static if (!directed)
+            {
+                if (tail < head)
+                {
+                    swap(head, tail);
+                }
+            }
+            _head[l + i] = head;
+            _tail[l + i] = tail;
+            ++_sumHead[head + 1 .. $];
+            ++_sumTail[tail + 1 .. $];
+        }
         indexEdges();
     }
 }

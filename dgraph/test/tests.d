@@ -29,15 +29,23 @@ import dgraph.graph;
   Tests adding edges one at a time.  Can be used e.g. for benchmarking or for
   checking that network properties are reliably imported.
  */
-void testAddEdge(bool directed = false, ushort verbose = 0)(immutable size_t v, immutable size_t[] edgeList)
+void testAddEdge(bool allAtOnce = false, bool directed = false, ushort verbose = 0, T : size_t)
+                (immutable size_t v, T[] edgeList)
 {
     assert(edgeList.length % 2 == 0);
     auto g = new Graph!directed;
     g.addVertices(v);
 
-    foreach(i; 0 .. edgeList.length / 2)
+    static if (allAtOnce)
     {
-        g.addEdge(edgeList[2*i], edgeList[2 * i + 1]);
+        g.addEdge(edgeList);
+    }
+    else
+    {
+        foreach(i; 0 .. edgeList.length / 2)
+        {
+            g.addEdge(edgeList[2*i], edgeList[2 * i + 1]);
+        }
     }
 
     static if (verbose > 0)
