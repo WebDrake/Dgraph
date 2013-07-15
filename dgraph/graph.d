@@ -42,12 +42,19 @@ final class Graph(bool dir)
         assert(_indexHead.length == _indexTail.length);
         assert(_head.length == _tail.length);
         immutable size_t l = _indexHead.length;
+        _indexHead.length = _head.length;
+        _indexTail.length = _tail.length;
         foreach(e; iota(l, _head.length))
         {
-            size_t i = _indexHead.map!(a => _head[a]).assumeSorted.lowerBound(_head[e]).length;
-            insertInPlace(_indexHead, i, e);
-            i = _indexTail.map!(a => _tail[a]).assumeSorted.lowerBound(_tail[e]).length;
-            insertInPlace(_indexTail, i, e);
+            size_t i, j;
+            i = _indexHead[0 .. e].map!(a => _head[a]).assumeSorted.lowerBound(_head[e]).length;
+            for(j = e; j > i; --j)
+                _indexHead[j] = _indexHead[j - 1];
+            _indexHead[i] = e;
+            i = _indexTail[0 .. e].map!(a => _tail[a]).assumeSorted.lowerBound(_tail[e]).length;
+            for(j = e; j > i; --j)
+                _indexTail[j] = _indexTail[j - 1];
+            _indexTail[i] = e;
         }
         assert(_indexHead.length == _indexTail.length);
         assert(_indexHead.length == _head.length, text(_indexHead.length, " head indices but ", _head.length, " head values."));
