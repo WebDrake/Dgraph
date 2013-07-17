@@ -46,12 +46,17 @@ final class Graph(bool dir)
         _indexTail.length = _tail.length;
         foreach(e; l .. _head.length)
         {
-            size_t i, j;
-            i = _indexHead[0 .. e].map!(a => _head[a]).assumeSorted.lowerBound(_head[e]).length;
+            size_t i, j, lower, upper;
+            upper = _indexHead[0 .. e].map!(a => _head[a]).assumeSorted.lowerBound(_head[e] + 1).length;
+            lower = _indexHead[0 .. upper].map!(a => _head[a]).assumeSorted.lowerBound(_head[e]).length;
+            i = lower + _indexHead[lower .. upper].map!(a => _tail[a]).assumeSorted.lowerBound(_tail[e]).length;
             for(j = e; j > i; --j)
                 _indexHead[j] = _indexHead[j - 1];
             _indexHead[i] = e;
-            i = _indexTail[0 .. e].map!(a => _tail[a]).assumeSorted.lowerBound(_tail[e]).length;
+
+            upper = _indexTail[0 .. e].map!(a => _tail[a]).assumeSorted.lowerBound(_tail[e] + 1).length;
+            lower = _indexTail[0 .. upper].map!(a => _tail[a]).assumeSorted.lowerBound(_tail[e]).length;
+            i = lower + _indexTail[lower .. upper].map!(a => _head[a]).assumeSorted.lowerBound(_head[e]).length;
             for(j = e; j > i; --j)
                 _indexTail[j] = _indexTail[j - 1];
             _indexTail[i] = e;
@@ -66,8 +71,8 @@ final class Graph(bool dir)
         _indexHead ~= iota(_indexHead.length, _head.length).array;
         _indexTail ~= iota(_indexTail.length, _tail.length).array;
         assert(_indexHead.length == _indexTail.length);
-        _indexHead.schwartzSort!(a => _head[a], "a < b");
-        _indexTail.schwartzSort!(a => _tail[a], "a < b");
+        _indexHead.multiSort!((a, b) => _head[a] < _head[b], (a, b) => _tail[a] < _tail[b]);
+        _indexTail.multiSort!((a, b) => _tail[a] < _tail[b], (a, b) => _head[a] < _head[b]);
     }
 
     void sumEdges(ref size_t[] sum, ref size_t[] vertex, ref size_t[] index)
@@ -244,8 +249,8 @@ final class Graph(bool dir)
     {
         auto neighbours(immutable size_t v) const
         {
-            return chain(map!(a => _tail[_indexHead[a]])(iota(_sumHead[v], _sumHead[v + 1])),
-                         map!(a => _head[_indexTail[a]])(iota(_sumTail[v], _sumTail[v + 1])));
+            return chain(map!(a => _head[_indexTail[a]])(iota(_sumTail[v], _sumTail[v + 1])),
+                         map!(a => _tail[_indexHead[a]])(iota(_sumHead[v], _sumHead[v + 1])));
         }
 
         alias neighbors = neighbours;
@@ -319,11 +324,12 @@ unittest
     auto g1 = new Graph!false;
     g1.addVertices(10);
     assert(g1.vertexCount == 10);
-/*    g1.addEdge(5, 8);
+    g1.addEdge(5, 8);
+    g1.addEdge(5, 4);
     g1.addEdge(7, 4);
+    g1.addEdge(3, 4);
     g1.addEdge(6, 9);
-    g1.addEdge(3, 2);*/
-    g1.addEdge([5, 8, 7, 4, 6, 9, 3, 2]);
+    g1.addEdge(3, 2);
     foreach(head, tail; g1.edge)
         writeln("\t", head, "\t", tail);
     writeln(g1._indexHead);
@@ -341,7 +347,9 @@ unittest
         foreach (t; iota(10))
         {
             if ((h == 5 && t == 8) || (h == 8 && t == 5) ||
+                (h == 5 && t == 4) || (h == 4 && t == 5) ||
                 (h == 7 && t == 4) || (h == 4 && t == 7) ||
+                (h == 3 && t == 4) || (h == 4 && t == 3) ||
                 (h == 6 && t == 9) || (h == 9 && t == 6) ||
                 (h == 3 && t == 2) || (h == 2 && t == 3))
             {
@@ -364,11 +372,12 @@ unittest
     auto g2 = new Graph!true;
     g2.addVertices(10);
     assert(g2.vertexCount == 10);
-/*    g2.addEdge(5, 8);
+    g2.addEdge(5, 8);
+    g2.addEdge(5, 4);
     g2.addEdge(7, 4);
+    g2.addEdge(3, 4);
     g2.addEdge(6, 9);
-    g2.addEdge(3, 2);*/
-    g2.addEdge([5, 8, 7, 4, 6, 9, 3, 2]);
+    g2.addEdge(3, 2);
     foreach(head, tail; g2.edge)
         writeln("\t", head, "\t", tail);
     writeln(g2._indexHead);
@@ -386,7 +395,9 @@ unittest
         foreach (t; iota(10))
         {
             if ((h == 5 && t == 8) ||
+                (h == 5 && t == 4) ||
                 (h == 7 && t == 4) ||
+                (h == 3 && t == 4) ||
                 (h == 6 && t == 9) ||
                 (h == 3 && t == 2))
             {

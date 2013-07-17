@@ -21,7 +21,7 @@
 
 module dgraph.test.tests;
 
-import std.exception;
+import std.algorithm, std.exception;
 
 import dgraph.graph;
 
@@ -70,24 +70,49 @@ void testAddEdge(bool allAtOnce = false, bool directed = false, ushort verbose =
         {
             writeln("Neighbours of node 0: ", g.neighbours(0));
         }
-        static if (verbose > 1)
+    }
+    static if (verbose > 1)
+    {
+        static if (g.directed)
         {
-            static if (g.directed)
+            writeln("In- and out-degrees of vertices:");
+            foreach(i; 0 .. g.vertexCount)
             {
-                writeln("In- and out-degrees of vertices:");
-                foreach(i; 0 .. g.vertexCount)
-                {
-                    writeln("\t", i, "\t", g.degreeIn(i), "\t", g.degreeOut(i));
-                }
+                writeln("\t", i, "\t", g.degreeIn(i), "\t", g.degreeOut(i));
             }
-            else
+        }
+        else
+        {
+            writeln("Degrees of vertices:");
+            foreach(i; 0 .. g.vertexCount)
             {
-                writeln("Degrees of vertices:");
-                foreach(i; 0 .. g.vertexCount)
-                {
-                    writeln("\t", i, "\t", g.degree(i));
-                }
+                writeln("\t", i, "\t", g.degree(i));
             }
+        }
+    }
+    static if (verbose > 2)
+    {
+        writeln("Incoming neighbours for vertices:");
+        foreach(i; 0 .. g.vertexCount)
+        {
+            write("\t", i, ": ");
+            foreach(n; g.neighboursIn(i))
+            {
+                write(" ", n);
+            }
+            writeln;
+            assert(isSorted(g.neighboursIn(i)));
+        }
+        writeln("Outgoing neighbours for vertices:");
+        foreach(i; 0 .. g.vertexCount)
+        {
+            write("\t", i, ": ");
+            foreach(n; g.neighboursOut(i))
+            {
+                write(" ", n);
+            }
+            writeln;
+            assert(isSorted(g.neighboursOut(i)));
         }
     }
 }
