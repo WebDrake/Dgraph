@@ -136,7 +136,7 @@ final class Graph(bool dir)
         else if (headDeg < tailDeg)
         {
             // search among the tails of head
-            foreach (t; map!(a => _tail[_indexHead[a]])(iota(_sumHead[head], _sumHead[head + 1])))
+            foreach (t; iota(_sumHead[head], _sumHead[head + 1]).map!(a => _tail[_indexHead[a]]))
             {
                 if (t == tail)
                 {
@@ -148,7 +148,7 @@ final class Graph(bool dir)
         else
         {
             // search among the heads of tail
-            foreach (h; map!(a => _head[_indexTail[a]])(iota(_sumTail[tail], _sumTail[tail + 1])))
+            foreach (h; iota(_sumTail[tail], _sumTail[tail + 1]).map!(a => _head[_indexTail[a]]))
             {
                 if (h == head)
                 {
@@ -180,7 +180,7 @@ final class Graph(bool dir)
         if (headDeg < tailDeg)
         {
             // search among the tails of head
-            foreach (i; map!(a => _indexHead[a])(iota(_sumHead[head], _sumHead[head + 1])))
+            foreach (i; iota(_sumHead[head], _sumHead[head + 1]).map!(a => _indexHead[a]))
             {
                 if (_tail[i] == tail)
                 {
@@ -193,7 +193,7 @@ final class Graph(bool dir)
         else
         {
             // search among the heads of tail
-            foreach (i; map!(a => _indexTail[a])(iota(_sumTail[tail], _sumTail[tail + 1])))
+            foreach (i; iota(_sumTail[tail], _sumTail[tail + 1]).map!(a => _indexTail[a]))
             {
                 if (_head[i] == head)
                 {
@@ -237,20 +237,20 @@ final class Graph(bool dir)
     {
         auto neighboursIn(immutable size_t v) const
         {
-            return map!(a => _head[_indexTail[a]])(iota(_sumTail[v], _sumTail[v + 1]));
+            return iota(_sumTail[v], _sumTail[v + 1]).map!(a => _head[_indexTail[a]]);
         }
 
         auto neighboursOut(immutable size_t v) const
         {
-            return map!(a => _tail[_indexHead[a]])(iota(_sumHead[v], _sumHead[v + 1]));
+            return iota(_sumHead[v], _sumHead[v + 1]).map!(a => _tail[_indexHead[a]]);
         }
     }
     else
     {
         auto neighbours(immutable size_t v) const
         {
-            return chain(map!(a => _head[_indexTail[a]])(iota(_sumTail[v], _sumTail[v + 1])),
-                         map!(a => _tail[_indexHead[a]])(iota(_sumHead[v], _sumHead[v + 1])));
+            return chain(iota(_sumTail[v], _sumTail[v + 1]).map!(a => _head[_indexTail[a]]),
+                         iota(_sumHead[v], _sumHead[v + 1]).map!(a => _tail[_indexHead[a]]));
         }
 
         alias neighbors = neighbours;
@@ -341,7 +341,8 @@ unittest
         writeln("\td(", v, ") =\t", g1.degree(v), "\tn(", v, ") = ", g1.neighbours(v));
     }
     writeln;
-    assert(isSorted(map!(a => g1._head[g1._indexHead[a]])(iota(g1._head.length))));
+    assert(iota(g1._head.length).map!(a => g1._head[g1._indexHead[a]]).isSorted);
+    assert(iota(g1._tail.length).map!(a => g1._tail[g1._indexTail[a]]).isSorted);
     foreach (h; iota(10))
     {
         foreach (t; iota(10))
@@ -389,7 +390,8 @@ unittest
         writeln("\td_out(", v, ") =\t", g2.degreeOut(v), "\tn_out(", v, ") = ", g2.neighboursOut(v),
                 "\td_in(", v, ") =\t", g2.degreeIn(v), "\tn_in(", v, ") = ", g2.neighboursIn(v));
     }
-    assert(isSorted(map!(a => g2._head[g2._indexHead[a]])(iota(g2._head.length))));
+    assert(iota(g2._head.length).map!(a => g2._head[g2._indexHead[a]]).isSorted);
+    assert(iota(g2._tail.length).map!(a => g2._tail[g2._indexTail[a]]).isSorted);
     foreach (h; iota(10))
     {
         foreach (t; iota(10))
