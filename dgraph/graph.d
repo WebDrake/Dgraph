@@ -235,6 +235,30 @@ final class Graph(bool dir)
 
     static if (directed)
     {
+        auto incidentEdgesIn(immutable size_t v) const
+        {
+            return iota(_sumTail[v], _sumTail[v + 1]).map!(a => _indexTail[a]);
+        }
+
+        auto incidentEdgesOut(immutable size_t v) const
+        {
+            return iota(_sumHead[v], _sumHead[v + 1]).map!(a => _indexHead[a]);
+        }
+    }
+    else
+    {
+        auto incidentEdges(immutable size_t v) const
+        {
+            return chain(iota(_sumTail[v], _sumTail[v + 1]).map!(a => _indexTail[a]),
+                         iota(_sumHead[v], _sumHead[v + 1]).map!(a => _indexHead[a]));
+        }
+
+        alias incidentEdgesIn  = incidentEdges;
+        alias incidentEdgesOut = incidentEdges;
+    }
+
+    static if (directed)
+    {
         auto neighboursIn(immutable size_t v) const
         {
             return iota(_sumTail[v], _sumTail[v + 1]).map!(a => _head[_indexTail[a]]);
@@ -336,16 +360,28 @@ unittest
     writeln(g1._indexTail);
     writeln(g1._sumHead);
     writeln(g1._sumTail);
-    foreach(v; iota(g1.vertexCount))
+    foreach(v; 0 .. g1.vertexCount)
     {
-        writeln("\td(", v, ") =\t", g1.degree(v), "\tn(", v, ") = ", g1.neighbours(v));
+        writeln("\td(", v, ") =\t", g1.degree(v), "\tn(", v, ") = ", g1.neighbours(v), "\ti(", v, ") = ", g1.incidentEdges(v));
+        foreach(e, n; zip(g1.incidentEdges(v), g1.neighbours(v)))
+        {
+            if (g1.edge[e][0] == v)
+            {
+                assert(g1.edge[e][1] == n);
+            }
+            else
+            {
+                assert(g1.edge[e][1] == v);
+                assert(g1.edge[e][0] == n);
+            }
+        }
     }
     writeln;
     assert(iota(g1._head.length).map!(a => g1._head[g1._indexHead[a]]).isSorted);
     assert(iota(g1._tail.length).map!(a => g1._tail[g1._indexTail[a]]).isSorted);
-    foreach (h; iota(10))
+    foreach (h; 0 .. 10)
     {
-        foreach (t; iota(10))
+        foreach (t; 0 .. 10)
         {
             if ((h == 5 && t == 8) || (h == 8 && t == 5) ||
                 (h == 5 && t == 4) || (h == 4 && t == 5) ||
@@ -385,16 +421,28 @@ unittest
     writeln(g2._indexTail);
     writeln(g2._sumHead);
     writeln(g2._sumTail);
-    foreach(v; iota(g2.vertexCount))
+    foreach(v; 0 .. g2.vertexCount)
     {
-        writeln("\td_out(", v, ") =\t", g2.degreeOut(v), "\tn_out(", v, ") = ", g2.neighboursOut(v),
-                "\td_in(", v, ") =\t", g2.degreeIn(v), "\tn_in(", v, ") = ", g2.neighboursIn(v));
+        writeln("\td_out(", v, ") =\t", g2.degreeOut(v), "\tn_out(", v, ") = ", g2.neighboursOut(v), "\ti_out(", v, ") = ", g2.incidentEdgesOut(v),
+                "\td_in(", v, ") =\t", g2.degreeIn(v), "\tn_in(", v, ") = ", g2.neighboursIn(v), "\ti_in(", v, ") = ", g2.incidentEdgesIn(v));
+
+        foreach(e, n; zip(g2.incidentEdgesIn(v), g2.neighboursIn(v)))
+        {
+            assert(g2.edge[e][0] == n);
+            assert(g2.edge[e][1] == v);
+        }
+
+        foreach(e, n; zip(g2.incidentEdgesOut(v), g2.neighboursOut(v)))
+        {
+            assert(g2.edge[e][0] == v);
+            assert(g2.edge[e][1] == n);
+        }
     }
     assert(iota(g2._head.length).map!(a => g2._head[g2._indexHead[a]]).isSorted);
     assert(iota(g2._tail.length).map!(a => g2._tail[g2._indexTail[a]]).isSorted);
-    foreach (h; iota(10))
+    foreach (h; 0 .. 10)
     {
-        foreach (t; iota(10))
+        foreach (t; 0 .. 10)
         {
             if ((h == 5 && t == 8) ||
                 (h == 5 && t == 4) ||
