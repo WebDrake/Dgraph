@@ -36,6 +36,8 @@ final class Graph(bool dir)
     size_t[] _indexTail;
     size_t[] _sumHead = [0];
     size_t[] _sumTail = [0];
+    size_t[] _neighbours;
+    size_t[] _incidentEdges;
 
     void indexEdgesInsertion()
     {
@@ -235,22 +237,53 @@ final class Graph(bool dir)
 
     static if (directed)
     {
-        auto incidentEdgesIn(immutable size_t v) const
+        auto incidentEdgesIn(immutable size_t v)
         {
-            return iota(_sumTail[v], _sumTail[v + 1]).map!(a => _indexTail[a]);
+            immutable size_t start = _sumTail[v] + _sumHead[v];
+            immutable size_t end = _sumHead[v] + _sumTail[v + 1];
+            size_t j = start;
+            foreach (i; _sumTail[v] .. _sumTail[v + 1])
+            {
+                _incidentEdges[j] = _indexTail[i];
+                ++j;
+            }
+            assert(j == end);
+            return _incidentEdges[start .. end];
         }
 
-        auto incidentEdgesOut(immutable size_t v) const
+        auto incidentEdgesOut(immutable size_t v)
         {
-            return iota(_sumHead[v], _sumHead[v + 1]).map!(a => _indexHead[a]);
+            immutable size_t start = _sumHead[v] + _sumTail[v + 1];
+            immutable size_t end = _sumTail[v + 1] + _sumHead[v + 1];
+            size_t j = start;
+            foreach (i; _sumHead[v] .. _sumHead[v + 1])
+            {
+                _incidentEdges[j] = _indexHead[i];
+                ++j;
+            }
+            assert(j == end);
+            return _incidentEdges[start .. end];
         }
     }
     else
     {
-        auto incidentEdges(immutable size_t v) const
+        auto incidentEdges(immutable size_t v)
         {
-            return chain(iota(_sumTail[v], _sumTail[v + 1]).map!(a => _indexTail[a]),
-                         iota(_sumHead[v], _sumHead[v + 1]).map!(a => _indexHead[a]));
+            immutable size_t start = _sumTail[v] + _sumHead[v];
+            immutable size_t end = _sumTail[v + 1] + _sumHead[v + 1];
+            size_t j = start;
+            foreach (i; _sumTail[v] .. _sumTail[v + 1])
+            {
+                _incidentEdges[j] = _indexTail[i];
+                ++j;
+            }
+            foreach (i; _sumHead[v] .. _sumHead[v + 1])
+            {
+                _incidentEdges[j] = _indexHead[i];
+                ++j;
+            }
+            assert(j == end);
+            return _incidentEdges[start .. end];
         }
 
         alias incidentEdgesIn  = incidentEdges;
@@ -259,22 +292,53 @@ final class Graph(bool dir)
 
     static if (directed)
     {
-        auto neighboursIn(immutable size_t v) const
+        auto neighboursIn(immutable size_t v)
         {
-            return iota(_sumTail[v], _sumTail[v + 1]).map!(a => _head[_indexTail[a]]);
+            immutable size_t start = _sumTail[v] + _sumHead[v];
+            immutable size_t end = _sumHead[v] + _sumTail[v + 1];
+            size_t j = start;
+            foreach (i; _sumTail[v] .. _sumTail[v + 1])
+            {
+                _neighbours[j] = _head[_indexTail[i]];
+                ++j;
+            }
+            assert(j == end);
+            return _neighbours[start .. end];
         }
 
-        auto neighboursOut(immutable size_t v) const
+        auto neighboursOut(immutable size_t v)
         {
-            return iota(_sumHead[v], _sumHead[v + 1]).map!(a => _tail[_indexHead[a]]);
+            immutable size_t start = _sumHead[v] + _sumTail[v + 1];
+            immutable size_t end = _sumTail[v + 1] + _sumHead[v + 1];
+            size_t j = start;
+            foreach (i; _sumHead[v] .. _sumHead[v + 1])
+            {
+                _neighbours[j] = _tail[_indexHead[i]];
+                ++j;
+            }
+            assert(j == end);
+            return _neighbours[start .. end];
         }
     }
     else
     {
-        auto neighbours(immutable size_t v) const
+        auto neighbours(immutable size_t v)
         {
-            return chain(iota(_sumTail[v], _sumTail[v + 1]).map!(a => _head[_indexTail[a]]),
-                         iota(_sumHead[v], _sumHead[v + 1]).map!(a => _tail[_indexHead[a]]));
+            immutable size_t start = _sumTail[v] + _sumHead[v];
+            immutable size_t end = _sumTail[v + 1] + _sumHead[v + 1];
+            size_t j = start;
+            foreach (i; _sumTail[v] .. _sumTail[v + 1])
+            {
+                _neighbours[j] = _head[_indexTail[i]];
+                ++j;
+            }
+            foreach (i; _sumHead[v] .. _sumHead[v + 1])
+            {
+                _neighbours[j] = _tail[_indexHead[i]];
+                ++j;
+            }
+            assert(j == end);
+            return _neighbours[start .. end];
         }
 
         alias neighbors = neighbours;
@@ -311,6 +375,8 @@ final class Graph(bool dir)
         indexEdgesInsertion();
         ++_sumHead[head + 1 .. $];
         ++_sumTail[tail + 1 .. $];
+        _neighbours.length = 2 * _head.length;
+        _incidentEdges.length = 2 * _head.length;
     }
 
     void addEdge(T : size_t)(T[] edgeList)
@@ -339,6 +405,8 @@ final class Graph(bool dir)
         indexEdgesSort();
         sumEdges(_sumHead, _head, _indexHead);
         sumEdges(_sumTail, _tail, _indexTail);
+        _neighbours.length = 2 * _head.length;
+        _incidentEdges.length = 2 * _head.length;
     }
 }
 
@@ -376,6 +444,8 @@ unittest
             }
         }
     }
+    writeln(g1._neighbours);
+    writeln(g1._incidentEdges);
     writeln;
     assert(iota(g1._head.length).map!(a => g1._head[g1._indexHead[a]]).isSorted);
     assert(iota(g1._tail.length).map!(a => g1._tail[g1._indexTail[a]]).isSorted);
@@ -438,6 +508,8 @@ unittest
             assert(g2.edge[e][1] == n);
         }
     }
+    writeln(g2._neighbours);
+    writeln(g2._incidentEdges);
     assert(iota(g2._head.length).map!(a => g2._head[g2._indexHead[a]]).isSorted);
     assert(iota(g2._tail.length).map!(a => g2._tail[g2._indexTail[a]]).isSorted);
     foreach (h; 0 .. 10)
