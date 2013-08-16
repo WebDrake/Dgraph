@@ -36,20 +36,20 @@ final class Graph(bool dir)
     size_t[] _indexTail;
     size_t[] _sumHead = [0];
     size_t[] _sumTail = [0];
-    size_t[] _neighbours;
-    size_t[] _incidentEdges;
+    size_t[] _neighboursCache;
+    size_t[] _incidentEdgesCache;
 
     static if (directed)
     {
-        bool[] _cacheNeighboursIn;
-        bool[] _cacheNeighboursOut;
-        bool[] _cacheIncidentIn;
-        bool[] _cacheIncidentOut;
+        size_t[][] _neighboursIn;
+        size_t[][] _neighboursOut;
+        size_t[][] _incidentEdgesIn;
+        size_t[][] _incidentEdgesOut;
     }
     else
     {
-        bool[] _cacheNeighbours;
-        bool[] _cacheIncident;
+        size_t[][] _neighbours;
+        size_t[][] _incidentEdges;
     }
 
     void indexEdgesInsertion()
@@ -252,63 +252,63 @@ final class Graph(bool dir)
     {
         auto incidentEdgesIn(immutable size_t v)
         {
-            immutable size_t start = _sumTail[v] + _sumHead[v];
-            immutable size_t end = _sumHead[v] + _sumTail[v + 1];
-            if (!_cacheIncidentIn[v])
+            if (_incidentEdgesIn[v] is null)
             {
+                immutable size_t start = _sumTail[v] + _sumHead[v];
+                immutable size_t end = _sumHead[v] + _sumTail[v + 1];
                 size_t j = start;
                 foreach (i; _sumTail[v] .. _sumTail[v + 1])
                 {
-                    _incidentEdges[j] = _indexTail[i];
+                    _incidentEdgesCache[j] = _indexTail[i];
                     ++j;
                 }
                 assert(j == end);
-                _cacheIncidentIn[v] = true;
+                _incidentEdgesIn[v] = _incidentEdgesCache[start .. end];
             }
-            return _incidentEdges[start .. end];
+            return _incidentEdgesIn[v];
         }
 
         auto incidentEdgesOut(immutable size_t v)
         {
-            immutable size_t start = _sumHead[v] + _sumTail[v + 1];
-            immutable size_t end = _sumTail[v + 1] + _sumHead[v + 1];
-            if (!_cacheIncidentOut[v])
+            if (_incidentEdgesOut[v] is null)
             {
+                immutable size_t start = _sumHead[v] + _sumTail[v + 1];
+                immutable size_t end = _sumTail[v + 1] + _sumHead[v + 1];
                 size_t j = start;
                 foreach (i; _sumHead[v] .. _sumHead[v + 1])
                 {
-                    _incidentEdges[j] = _indexHead[i];
+                    _incidentEdgesCache[j] = _indexHead[i];
                     ++j;
                 }
                 assert(j == end);
-                _cacheIncidentOut[v] = true;
+                _incidentEdgesOut[v] = _incidentEdgesCache[start .. end];
             }
-            return _incidentEdges[start .. end];
+            return _incidentEdgesOut[v];
         }
     }
     else
     {
         auto incidentEdges(immutable size_t v)
         {
-            immutable size_t start = _sumTail[v] + _sumHead[v];
-            immutable size_t end = _sumTail[v + 1] + _sumHead[v + 1];
-            if (!_cacheIncident[v])
+            if (_incidentEdges[v] is null)
             {
+                immutable size_t start = _sumTail[v] + _sumHead[v];
+                immutable size_t end = _sumTail[v + 1] + _sumHead[v + 1];
                 size_t j = start;
                 foreach (i; _sumTail[v] .. _sumTail[v + 1])
                 {
-                    _incidentEdges[j] = _indexTail[i];
+                    _incidentEdgesCache[j] = _indexTail[i];
                     ++j;
                 }
                 foreach (i; _sumHead[v] .. _sumHead[v + 1])
                 {
-                    _incidentEdges[j] = _indexHead[i];
+                    _incidentEdgesCache[j] = _indexHead[i];
                     ++j;
                 }
                 assert(j == end);
-                _cacheIncident[v] = true;
+                _incidentEdges[v] = _incidentEdgesCache[start .. end];
             }
-            return _incidentEdges[start .. end];
+            return _incidentEdges[v];
         }
 
         alias incidentEdgesIn  = incidentEdges;
@@ -319,63 +319,63 @@ final class Graph(bool dir)
     {
         auto neighboursIn(immutable size_t v)
         {
-            immutable size_t start = _sumTail[v] + _sumHead[v];
-            immutable size_t end = _sumHead[v] + _sumTail[v + 1];
-            if (!_cacheNeighboursIn[v])
+            if (_neighboursIn[v] is null)
             {
+                immutable size_t start = _sumTail[v] + _sumHead[v];
+                immutable size_t end = _sumHead[v] + _sumTail[v + 1];
                 size_t j = start;
                 foreach (i; _sumTail[v] .. _sumTail[v + 1])
                 {
-                    _neighbours[j] = _head[_indexTail[i]];
+                    _neighboursCache[j] = _head[_indexTail[i]];
                     ++j;
                 }
                 assert(j == end);
-                _cacheNeighboursIn[v] = true;
+                _neighboursIn[v] = _neighboursCache[start .. end];
             }
-            return _neighbours[start .. end];
+            return _neighboursIn[v];
         }
 
         auto neighboursOut(immutable size_t v)
         {
-            immutable size_t start = _sumHead[v] + _sumTail[v + 1];
-            immutable size_t end = _sumTail[v + 1] + _sumHead[v + 1];
-            if (!_cacheNeighboursOut[v])
+            if (_neighboursOut[v] is null)
             {
+                immutable size_t start = _sumHead[v] + _sumTail[v + 1];
+                immutable size_t end = _sumTail[v + 1] + _sumHead[v + 1];
                 size_t j = start;
                 foreach (i; _sumHead[v] .. _sumHead[v + 1])
                 {
-                    _neighbours[j] = _tail[_indexHead[i]];
+                    _neighboursCache[j] = _tail[_indexHead[i]];
                     ++j;
                 }
                 assert(j == end);
-                _cacheNeighboursOut[v] = true;
+                _neighboursOut[v] = _neighboursCache[start .. end];
             }
-            return _neighbours[start .. end];
+            return _neighboursOut[v];
         }
     }
     else
     {
         auto neighbours(immutable size_t v)
         {
-            immutable size_t start = _sumTail[v] + _sumHead[v];
-            immutable size_t end = _sumTail[v + 1] + _sumHead[v + 1];
-            if(!_cacheNeighbours[v])
+            if(_neighbours[v] is null)
             {
+                immutable size_t start = _sumTail[v] + _sumHead[v];
+                immutable size_t end = _sumTail[v + 1] + _sumHead[v + 1];
                 size_t j = start;
                 foreach (i; _sumTail[v] .. _sumTail[v + 1])
                 {
-                    _neighbours[j] = _head[_indexTail[i]];
+                    _neighboursCache[j] = _head[_indexTail[i]];
                     ++j;
                 }
                 foreach (i; _sumHead[v] .. _sumHead[v + 1])
                 {
-                    _neighbours[j] = _tail[_indexHead[i]];
+                    _neighboursCache[j] = _tail[_indexHead[i]];
                     ++j;
                 }
                 assert(j == end);
-                _cacheNeighbours[v] = true;
+                _neighbours[v] = _neighboursCache[start .. end];
             }
-            return _neighbours[start .. end];
+            return _neighbours[v];
         }
 
         alias neighbors = neighbours;
@@ -390,15 +390,15 @@ final class Graph(bool dir)
     {
         static if (directed)
         {
-            assert(_sumTail.length == _cacheNeighboursIn.length + 1);
-            assert(_sumHead.length == _cacheNeighboursOut.length + 1);
-            assert(_sumTail.length == _cacheIncidentIn.length + 1);
-            assert(_sumHead.length == _cacheIncidentOut.length + 1);
+            assert(_sumTail.length == _neighboursIn.length + 1);
+            assert(_sumHead.length == _neighboursOut.length + 1);
+            assert(_sumTail.length == _incidentEdgesIn.length + 1);
+            assert(_sumHead.length == _incidentEdgesOut.length + 1);
         }
         else
         {
-            assert(_sumHead.length == _cacheNeighbours.length + 1);
-            assert(_sumTail.length == _cacheIncident.length + 1);
+            assert(_sumHead.length == _neighbours.length + 1);
+            assert(_sumTail.length == _incidentEdges.length + 1);
         }
 
         immutable size_t l = _sumHead.length;
@@ -410,21 +410,21 @@ final class Graph(bool dir)
 
         static if (directed)
         {
-            _cacheNeighboursIn.length += n;
-            _cacheNeighboursOut.length += n;
-            _cacheIncidentIn.length += n;
-            _cacheIncidentOut.length += n;
-            _cacheNeighboursIn[l - 1 .. $] = false;
-            _cacheNeighboursOut[l - 1 .. $] = false;
-            _cacheIncidentIn[l - 1 .. $] = false;
-            _cacheIncidentOut[l - 1 .. $] = false;
+            _neighboursIn.length += n;
+            _neighboursOut.length += n;
+            _incidentEdgesIn.length += n;
+            _incidentEdgesOut.length += n;
+            _neighboursIn[l - 1 .. $] = null;
+            _neighboursOut[l - 1 .. $] = null;
+            _incidentEdgesIn[l - 1 .. $] = null;
+            _incidentEdgesOut[l - 1 .. $] = null;
         }
         else
         {
-            _cacheNeighbours.length += n;
-            _cacheIncident.length += n;
-            _cacheNeighbours[l - 1 .. $] = false;
-            _cacheIncident[l - 1 .. $] = false;
+            _neighbours.length += n;
+            _incidentEdges.length += n;
+            _neighbours[l - 1 .. $] = null;
+            _incidentEdges[l - 1 .. $] = null;
         }
     }
 
@@ -444,19 +444,19 @@ final class Graph(bool dir)
         indexEdgesInsertion();
         ++_sumHead[head + 1 .. $];
         ++_sumTail[tail + 1 .. $];
-        _neighbours.length = 2 * _head.length;
-        _incidentEdges.length = 2 * _head.length;
+        _neighboursCache.length = 2 * _head.length;
+        _incidentEdgesCache.length = 2 * _head.length;
         static if (directed)
         {
-            _cacheNeighboursIn[] = false;
-            _cacheNeighboursOut[] = false;
-            _cacheIncidentIn[] = false;
-            _cacheIncidentOut[] = false;
+            _neighboursIn[] = null;
+            _neighboursOut[] = null;
+            _incidentEdgesIn[] = null;
+            _incidentEdgesOut[] = null;
         }
         else
         {
-            _cacheNeighbours[] = false;
-            _cacheIncident[] = false;
+            _neighbours[] = null;
+            _incidentEdges[] = null;
         }
     }
 
@@ -486,19 +486,19 @@ final class Graph(bool dir)
         indexEdgesSort();
         sumEdges(_sumHead, _head, _indexHead);
         sumEdges(_sumTail, _tail, _indexTail);
-        _neighbours.length = 2 * _head.length;
-        _incidentEdges.length = 2 * _head.length;
+        _neighboursCache.length = 2 * _head.length;
+        _incidentEdgesCache.length = 2 * _head.length;
         static if (directed)
         {
-            _cacheNeighboursIn[] = false;
-            _cacheNeighboursOut[] = false;
-            _cacheIncidentIn[] = false;
-            _cacheIncidentOut[] = false;
+            _neighboursIn[] = null;
+            _neighboursOut[] = null;
+            _incidentEdgesIn[] = null;
+            _incidentEdgesOut[] = null;
         }
         else
         {
-            _cacheNeighbours[] = false;
-            _cacheIncident[] = false;
+            _neighbours[] = null;
+            _incidentEdges[] = null;
         }
     }
 }
@@ -537,8 +537,8 @@ unittest
             }
         }
     }
-    writeln(g1._neighbours);
-    writeln(g1._incidentEdges);
+    writeln(g1._neighboursCache);
+    writeln(g1._incidentEdgesCache);
     writeln;
     assert(iota(g1._head.length).map!(a => g1._head[g1._indexHead[a]]).isSorted);
     assert(iota(g1._tail.length).map!(a => g1._tail[g1._indexTail[a]]).isSorted);
@@ -601,8 +601,8 @@ unittest
             assert(g2.edge[e][1] == n);
         }
     }
-    writeln(g2._neighbours);
-    writeln(g2._incidentEdges);
+    writeln(g2._neighboursCache);
+    writeln(g2._incidentEdgesCache);
     assert(iota(g2._head.length).map!(a => g2._head[g2._indexHead[a]]).isSorted);
     assert(iota(g2._tail.length).map!(a => g2._tail[g2._indexTail[a]]).isSorted);
     foreach (h; 0 .. 10)
