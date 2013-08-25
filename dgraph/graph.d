@@ -257,7 +257,7 @@ final class Graph(bool dir)
                 immutable size_t start = _sumTail[v] + _sumHead[v];
                 immutable size_t end = _sumHead[v] + _sumTail[v + 1];
                 size_t j = start;
-                foreach (i; _sumTail[v] .. _sumTail[v + 1])
+                foreach (immutable i; _sumTail[v] .. _sumTail[v + 1])
                 {
                     _incidentEdgesCache[j] = _indexTail[i];
                     ++j;
@@ -275,7 +275,7 @@ final class Graph(bool dir)
                 immutable size_t start = _sumHead[v] + _sumTail[v + 1];
                 immutable size_t end = _sumTail[v + 1] + _sumHead[v + 1];
                 size_t j = start;
-                foreach (i; _sumHead[v] .. _sumHead[v + 1])
+                foreach (immutable i; _sumHead[v] .. _sumHead[v + 1])
                 {
                     _incidentEdgesCache[j] = _indexHead[i];
                     ++j;
@@ -295,12 +295,12 @@ final class Graph(bool dir)
                 immutable size_t start = _sumTail[v] + _sumHead[v];
                 immutable size_t end = _sumTail[v + 1] + _sumHead[v + 1];
                 size_t j = start;
-                foreach (i; _sumTail[v] .. _sumTail[v + 1])
+                foreach (immutable i; _sumTail[v] .. _sumTail[v + 1])
                 {
                     _incidentEdgesCache[j] = _indexTail[i];
                     ++j;
                 }
-                foreach (i; _sumHead[v] .. _sumHead[v + 1])
+                foreach (immutable i; _sumHead[v] .. _sumHead[v + 1])
                 {
                     _incidentEdgesCache[j] = _indexHead[i];
                     ++j;
@@ -324,7 +324,7 @@ final class Graph(bool dir)
                 immutable size_t start = _sumTail[v] + _sumHead[v];
                 immutable size_t end = _sumHead[v] + _sumTail[v + 1];
                 size_t j = start;
-                foreach (i; _sumTail[v] .. _sumTail[v + 1])
+                foreach (immutable i; _sumTail[v] .. _sumTail[v + 1])
                 {
                     _neighboursCache[j] = _head[_indexTail[i]];
                     ++j;
@@ -342,7 +342,7 @@ final class Graph(bool dir)
                 immutable size_t start = _sumHead[v] + _sumTail[v + 1];
                 immutable size_t end = _sumTail[v + 1] + _sumHead[v + 1];
                 size_t j = start;
-                foreach (i; _sumHead[v] .. _sumHead[v + 1])
+                foreach (immutable i; _sumHead[v] .. _sumHead[v + 1])
                 {
                     _neighboursCache[j] = _tail[_indexHead[i]];
                     ++j;
@@ -362,12 +362,12 @@ final class Graph(bool dir)
                 immutable size_t start = _sumTail[v] + _sumHead[v];
                 immutable size_t end = _sumTail[v + 1] + _sumHead[v + 1];
                 size_t j = start;
-                foreach (i; _sumTail[v] .. _sumTail[v + 1])
+                foreach (immutable i; _sumTail[v] .. _sumTail[v + 1])
                 {
                     _neighboursCache[j] = _head[_indexTail[i]];
                     ++j;
                 }
-                foreach (i; _sumHead[v] .. _sumHead[v + 1])
+                foreach (immutable i; _sumHead[v] .. _sumHead[v + 1])
                 {
                     _neighboursCache[j] = _tail[_indexHead[i]];
                     ++j;
