@@ -86,7 +86,7 @@ auto betweenness(T = double, bool directed)(ref Graph!directed g, bool[] ignore)
     delta[] = to!T(0);
     d[] = -1L;
 
-    foreach (s; 0 .. g.vertexCount)
+    foreach (immutable s; 0 .. g.vertexCount)
     {
         if (!ignore[s])
         {
@@ -102,7 +102,7 @@ auto betweenness(T = double, bool directed)(ref Graph!directed g, bool[] ignore)
                 q.pop();
                 stack[stackLength] = v;
                 ++stackLength;
-                foreach (w; g.neighboursOut(v))
+                foreach (immutable w; g.neighboursOut(v))
                 {
                     if (!ignore[w])
                     {
@@ -140,7 +140,7 @@ auto betweenness(T = double, bool directed)(ref Graph!directed g, bool[] ignore)
             {
                 --stackLength;
                 auto w = stack[stackLength];
-                foreach (v; p[w])
+                foreach (immutable v; p[w])
                 {
                     delta[v] += ((sigma[v] / sigma[w]) * (to!T(1) + delta[w]));
                 }
@@ -170,7 +170,7 @@ size_t largestClusterSize(bool directed)(ref Graph!directed g, bool[] ignore)
     auto q = VertexQueue(g.vertexCount);
     size_t largestCluster = 0;
 
-    foreach (s; 0 .. g.vertexCount)
+    foreach (immutable s; 0 .. g.vertexCount)
     {
         if (!ignore[s] && cluster[s] < 0)
         {
@@ -193,7 +193,7 @@ size_t largestClusterSize(bool directed)(ref Graph!directed g, bool[] ignore)
                     auto allNeighbours = g.neighbours(v);
                 }
 
-                foreach (w; allNeighbours)
+                foreach (immutable w; allNeighbours)
                 {
                     if (!ignore[w] && cluster[w] < 0)
                     {
@@ -236,15 +236,15 @@ unittest
         auto g = new Graph!directed;
         bool ignore[] = new bool[100];
         g.addVertices(100);
-        foreach (i; 0 .. 100)
+        foreach (immutable i; 0 .. 100)
         {
-            foreach (j; i .. 100)
+            foreach (immutable j; i .. 100)
             {
                 g.addEdge(i, j);
             }
         }
         writeln("largest cluster size = ", largestClusterSize(g, ignore));
-        foreach (i; 0 .. 100)
+        foreach (immutable i; 0 .. 100)
         {
             ignore[i] = true;
             writeln(i, ": largest cluster size = ", largestClusterSize(g, ignore));
@@ -256,7 +256,7 @@ unittest
         auto g = new Graph!directed;
         bool ignore[] = new bool[n];
         g.addVertices(n);
-        foreach(i; 0 .. n - 1)
+        foreach (immutable i; 0 .. n - 1)
         {
             g.addEdge(i, i + 1);
         }
@@ -276,11 +276,11 @@ unittest
         g.addEdge(sampleGraph50);
         writeln("[[50]] largest cluster size = ", largestClusterSize(g, ignore));
 
-        foreach (i; iota(10))
+        foreach (immutable i; 0 .. 10)
         {
             auto sample1 = randomSample(iota(50), 7, Random(100 * i * i));
             ignore[] = false;
-            foreach (s; sample1)
+            foreach (immutable s; sample1)
             {
                 ignore[s] = true;
             }

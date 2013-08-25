@@ -42,7 +42,7 @@ void testAddEdge(bool allAtOnce = false, bool directed = false, ushort verbose =
     }
     else
     {
-        foreach(i; 0 .. edgeList.length / 2)
+        foreach (immutable i; 0 .. edgeList.length / 2)
         {
             g.addEdge(edgeList[2*i], edgeList[2 * i + 1]);
         }
@@ -76,7 +76,7 @@ void testAddEdge(bool allAtOnce = false, bool directed = false, ushort verbose =
         static if (g.directed)
         {
             writeln("In- and out-degrees of vertices:");
-            foreach(i; 0 .. g.vertexCount)
+            foreach (immutable i; 0 .. g.vertexCount)
             {
                 writeln("\t", i, "\t", g.degreeIn(i), "\t", g.degreeOut(i));
             }
@@ -84,7 +84,7 @@ void testAddEdge(bool allAtOnce = false, bool directed = false, ushort verbose =
         else
         {
             writeln("Degrees of vertices:");
-            foreach(i; 0 .. g.vertexCount)
+            foreach (immutable i; 0 .. g.vertexCount)
             {
                 writeln("\t", i, "\t", g.degree(i));
             }
@@ -93,10 +93,10 @@ void testAddEdge(bool allAtOnce = false, bool directed = false, ushort verbose =
     static if (verbose > 2)
     {
         writeln("Incoming neighbours for vertices:");
-        foreach(i; 0 .. g.vertexCount)
+        foreach (immutable i; 0 .. g.vertexCount)
         {
             write("\t", i, ": ");
-            foreach(n; g.neighboursIn(i))
+            foreach (immutable n; g.neighboursIn(i))
             {
                 write(" ", n);
             }
@@ -104,10 +104,10 @@ void testAddEdge(bool allAtOnce = false, bool directed = false, ushort verbose =
             assert(isSorted(g.neighboursIn(i)));
         }
         writeln("Outgoing neighbours for vertices:");
-        foreach(i; 0 .. g.vertexCount)
+        foreach (immutable i; 0 .. g.vertexCount)
         {
             write("\t", i, ": ");
-            foreach(n; g.neighboursOut(i))
+            foreach (immutable n; g.neighboursOut(i))
             {
                 write(" ", n);
             }
@@ -120,7 +120,7 @@ void testAddEdge(bool allAtOnce = false, bool directed = false, ushort verbose =
 /// Tests that the edgeID function returns correct values for all edges in the graph.
 void testEdgeID(bool directed)(ref Graph!directed g)
 {
-    foreach(i; 0 .. g.edgeCount)
+    foreach (immutable i; 0 .. g.edgeCount)
     {
         auto edge = g.edge[i];
         size_t id = g.edgeID(edge[0], edge[1]);

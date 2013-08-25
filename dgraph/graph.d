@@ -44,7 +44,7 @@ final class Graph(bool dir)
         immutable size_t l = _indexHead.length;
         _indexHead.length = _head.length;
         _indexTail.length = _tail.length;
-        foreach(e; l .. _head.length)
+        foreach (immutable e; l .. _head.length)
         {
             size_t i, j, lower, upper;
             upper = _indexHead[0 .. e].map!(a => _head[a]).assumeSorted.lowerBound(_head[e] + 1).length;
@@ -136,7 +136,7 @@ final class Graph(bool dir)
         else if (headDeg < tailDeg)
         {
             // search among the tails of head
-            foreach (t; iota(_sumHead[head], _sumHead[head + 1]).map!(a => _tail[_indexHead[a]]))
+            foreach (immutable t; iota(_sumHead[head], _sumHead[head + 1]).map!(a => _tail[_indexHead[a]]))
             {
                 if (t == tail)
                 {
@@ -148,7 +148,7 @@ final class Graph(bool dir)
         else
         {
             // search among the heads of tail
-            foreach (h; iota(_sumTail[tail], _sumTail[tail + 1]).map!(a => _head[_indexTail[a]]))
+            foreach (immutable h; iota(_sumTail[tail], _sumTail[tail + 1]).map!(a => _head[_indexTail[a]]))
             {
                 if (h == head)
                 {
@@ -180,7 +180,7 @@ final class Graph(bool dir)
         if (headDeg < tailDeg)
         {
             // search among the tails of head
-            foreach (i; iota(_sumHead[head], _sumHead[head + 1]).map!(a => _indexHead[a]))
+            foreach (immutable i; iota(_sumHead[head], _sumHead[head + 1]).map!(a => _indexHead[a]))
             {
                 if (_tail[i] == tail)
                 {
@@ -193,7 +193,7 @@ final class Graph(bool dir)
         else
         {
             // search among the heads of tail
-            foreach (i; iota(_sumTail[tail], _sumTail[tail + 1]).map!(a => _indexTail[a]))
+            foreach (immutable i; iota(_sumTail[tail], _sumTail[tail + 1]).map!(a => _indexTail[a]))
             {
                 if (_head[i] == head)
                 {
@@ -320,7 +320,7 @@ final class Graph(bool dir)
         immutable size_t l = _head.length;
         _head.length += edgeList.length / 2;
         _tail.length += edgeList.length / 2;
-        foreach(i; 0 .. edgeList.length / 2)
+        foreach (immutable i; 0 .. edgeList.length / 2)
         {
             size_t head = edgeList[2 * i];
             size_t tail = edgeList[2 * i + 1];
@@ -354,16 +354,18 @@ unittest
     g1.addEdge(3, 4);
     g1.addEdge(6, 9);
     g1.addEdge(3, 2);
-    foreach(head, tail; g1.edge)
+    foreach (immutable head, immutable tail; g1.edge)
+    {
         writeln("\t", head, "\t", tail);
+    }
     writeln(g1._indexHead);
     writeln(g1._indexTail);
     writeln(g1._sumHead);
     writeln(g1._sumTail);
-    foreach(v; 0 .. g1.vertexCount)
+    foreach (immutable v; 0 .. g1.vertexCount)
     {
         writeln("\td(", v, ") =\t", g1.degree(v), "\tn(", v, ") = ", g1.neighbours(v), "\ti(", v, ") = ", g1.incidentEdges(v));
-        foreach(e, n; zip(g1.incidentEdges(v), g1.neighbours(v)))
+        foreach (immutable e, immutable n; zip(g1.incidentEdges(v), g1.neighbours(v)))
         {
             if (g1.edge[e][0] == v)
             {
@@ -379,9 +381,9 @@ unittest
     writeln;
     assert(iota(g1._head.length).map!(a => g1._head[g1._indexHead[a]]).isSorted);
     assert(iota(g1._tail.length).map!(a => g1._tail[g1._indexTail[a]]).isSorted);
-    foreach (h; 0 .. 10)
+    foreach (immutable h; 0 .. 10)
     {
-        foreach (t; 0 .. 10)
+        foreach (immutable t; 0 .. 10)
         {
             if ((h == 5 && t == 8) || (h == 8 && t == 5) ||
                 (h == 5 && t == 4) || (h == 4 && t == 5) ||
@@ -398,7 +400,7 @@ unittest
             }
         }
     }
-    foreach(i; 0 .. g1.edgeCount)
+    foreach (immutable i; 0 .. g1.edgeCount)
     {
         size_t h = g1._head[i];
         size_t t = g1._tail[i];
@@ -415,24 +417,24 @@ unittest
     g2.addEdge(3, 4);
     g2.addEdge(6, 9);
     g2.addEdge(3, 2);
-    foreach(head, tail; g2.edge)
+    foreach (immutable head, immutable tail; g2.edge)
         writeln("\t", head, "\t", tail);
     writeln(g2._indexHead);
     writeln(g2._indexTail);
     writeln(g2._sumHead);
     writeln(g2._sumTail);
-    foreach(v; 0 .. g2.vertexCount)
+    foreach (immutable v; 0 .. g2.vertexCount)
     {
         writeln("\td_out(", v, ") =\t", g2.degreeOut(v), "\tn_out(", v, ") = ", g2.neighboursOut(v), "\ti_out(", v, ") = ", g2.incidentEdgesOut(v),
                 "\td_in(", v, ") =\t", g2.degreeIn(v), "\tn_in(", v, ") = ", g2.neighboursIn(v), "\ti_in(", v, ") = ", g2.incidentEdgesIn(v));
 
-        foreach(e, n; zip(g2.incidentEdgesIn(v), g2.neighboursIn(v)))
+        foreach (immutable e, immutable n; zip(g2.incidentEdgesIn(v), g2.neighboursIn(v)))
         {
             assert(g2.edge[e][0] == n);
             assert(g2.edge[e][1] == v);
         }
 
-        foreach(e, n; zip(g2.incidentEdgesOut(v), g2.neighboursOut(v)))
+        foreach (immutable e, immutable n; zip(g2.incidentEdgesOut(v), g2.neighboursOut(v)))
         {
             assert(g2.edge[e][0] == v);
             assert(g2.edge[e][1] == n);
@@ -440,9 +442,9 @@ unittest
     }
     assert(iota(g2._head.length).map!(a => g2._head[g2._indexHead[a]]).isSorted);
     assert(iota(g2._tail.length).map!(a => g2._tail[g2._indexTail[a]]).isSorted);
-    foreach (h; 0 .. 10)
+    foreach (immutable h; 0 .. 10)
     {
-        foreach (t; 0 .. 10)
+        foreach (immutable t; 0 .. 10)
         {
             if ((h == 5 && t == 8) ||
                 (h == 5 && t == 4) ||
@@ -459,7 +461,7 @@ unittest
             }
         }
     }
-    foreach(i; 0 .. g2.edgeCount)
+    foreach (immutable i; 0 .. g2.edgeCount)
     {
         size_t h = g2._head[i];
         size_t t = g2._tail[i];

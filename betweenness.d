@@ -10,7 +10,7 @@ void betw(bool directed)(ref Graph!directed g)
     auto centrality = betweenness(g, ignore);
     assert(centrality.length == g.vertexCount);
 /*    writeln("Centrality values:");
-    foreach(i, c; centrality)
+    foreach (immutable i, immutable c; centrality)
     {
         writeln("\t", i, "\t", c);
     }*/
@@ -21,7 +21,7 @@ void main()
     auto g = new Graph!false;
     g.addVertices(50);
 
-    foreach(i; 0 .. sampleGraph50.length / 2)
+    foreach (immutable i; 0 .. sampleGraph50.length / 2)
     {
         g.addEdge(sampleGraph50[2*i], sampleGraph50[2 * i + 1]);
     }
@@ -30,7 +30,7 @@ void main()
 
     StopWatch watch;
     watch.start;
-    foreach(i; 0 .. 10_000)
+    foreach (immutable _; 0 .. 10_000)
     {
         betw(g);
     }
