@@ -35,7 +35,7 @@ void main()
     writeln("This is quite quick, so we'll do it 100_001 times with the last");
     writeln("time being verbose.");
     watch.start;
-	foreach(i; 0 .. 100_000)
+	foreach (immutable _; 0 .. 100_000)
     {
 		testAddEdge!(true, false, 0)(50, sampleGraph50);
     }
@@ -49,7 +49,7 @@ void main()
     writeln("we'll only do it 1001 times, the last verbosely.");
     watch.reset;
     watch.start;
-    foreach(i; 0 .. 1_000)
+    foreach (immutable _; 0 .. 1_000)
     {
         testAddEdge!(true, false, 0)(10_000, sampleGraph10k);
     }
