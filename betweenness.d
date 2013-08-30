@@ -2,9 +2,9 @@ import std.datetime, std.stdio;
 
 import dgraph.graph, dgraph.metric, dgraph.test.samplegraph50;
 
-void betw(bool directed)(ref Graph!directed g)
+void betw(Graph)(ref Graph g)
+    if(isGraph!Graph)
 {
-    assert(!directed);
     auto centrality = betweenness(g);
     assert(centrality.length == g.vertexCount);
 /*    writeln("Centrality values:");
@@ -16,7 +16,8 @@ void betw(bool directed)(ref Graph!directed g)
 
 void main()
 {
-    auto g = new Graph!false;
+    alias Graph = IndexedEdgeList!false;
+    auto g = new Graph;
     g.addVertices(50);
 
     foreach (immutable i; 0 .. sampleGraph50.length / 2)

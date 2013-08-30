@@ -29,11 +29,19 @@ import dgraph.graph;
   Tests adding edges one at a time.  Can be used e.g. for benchmarking or for
   checking that network properties are reliably imported.
  */
-void testAddEdge(bool allAtOnce = false, bool directed = false, ushort verbose = 0, T : size_t)
+void testAddEdge(Graph, bool allAtOnce = false, ushort verbose = 0, T : size_t)
                 (immutable size_t v, T[] edgeList)
+    if (isGraph!Graph)
 {
     assert(edgeList.length % 2 == 0);
-    auto g = new Graph!directed;
+    static if (is(Graph == class))
+    {
+        auto g = new Graph;
+    }
+    else
+    {
+        auto g = Graph;
+    }
     g.addVertices(v);
 
     static if (allAtOnce)
@@ -118,7 +126,8 @@ void testAddEdge(bool allAtOnce = false, bool directed = false, ushort verbose =
 }
 
 /// Tests that the edgeID function returns correct values for all edges in the graph.
-void testEdgeID(bool directed)(ref Graph!directed g)
+void testEdgeID(Graph, bool directed)(ref Graph g)
+    if(isGraph!Graph)
 {
     foreach (immutable i; 0 .. g.edgeCount)
     {
