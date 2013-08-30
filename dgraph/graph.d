@@ -67,10 +67,38 @@ template isGraph(G)
     }
 }
 
+template isDirectedGraph(G)
+{
+    static if (isGraph!G)
+    {
+        enum bool isDirectedGraph = G.directed;
+    }
+    else
+    {
+        enum bool isDirectedGraph = false;
+    }
+}
+
+template isUndirectedGraph(G)
+{
+    static if (isGraph!G)
+    {
+        enum bool isUndirectedGraph = !G.directed;
+    }
+    else
+    {
+        enum bool isUndirectedGraph = false;
+    }
+}
+
 unittest
 {
     assert(isGraph!(Graph!true));
     assert(isGraph!(Graph!false));
+    assert(isDirectedGraph!(Graph!true));
+    assert(!isDirectedGraph!(Graph!false));
+    assert(!isUndirectedGraph!(Graph!true));
+    assert(isUndirectedGraph!(Graph!false));
 }
 
 final class Graph(bool dir)
