@@ -1,7 +1,7 @@
 DC = gdmd
 DFLAGS = -O -inline
 LIBSRC = dgraph/*.d dgraph/test/*.d
-PROGS = graphtest betweenness
+PROGS = graphtest betweenness50 betweenness10k
 
 all: $(PROGS)
 
