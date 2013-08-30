@@ -70,8 +70,8 @@ unittest
     assert(q.empty);
 }
 
-auto betweenness(T = double, bool directed)(ref Graph!directed g, bool[] ignore = null)
-    if (isFloatingPoint!T)
+auto betweenness(Graph, T = double)(ref Graph g, bool[] ignore = null)
+    if (isGraph!Graph && isFloatingPoint!T)
 {
     T[] centrality = new T[g.vertexCount];
     centrality[] = to!T(0);
@@ -159,7 +159,7 @@ auto betweenness(T = double, bool directed)(ref Graph!directed g, bool[] ignore 
         }
     }
 
-    static if (!directed)
+    static if (!g.directed)
     {
         centrality[] /= 2;
     }
@@ -167,7 +167,8 @@ auto betweenness(T = double, bool directed)(ref Graph!directed g, bool[] ignore 
     return centrality;
 }
 
-size_t largestClusterSize(bool directed)(ref Graph!directed g, bool[] ignore)
+size_t largestClusterSize(Graph)(ref Graph g, bool[] ignore)
+    if (isGraph!Graph)
 {
     long[] cluster = new long[g.vertexCount];
     cluster[] = -1L;
@@ -188,7 +189,7 @@ size_t largestClusterSize(bool directed)(ref Graph!directed g, bool[] ignore)
                 size_t v = q.front;
                 q.pop();
 
-                static if (directed)
+                static if (g.directed)
                 {
                     auto allNeighbours = chain(g.neighboursIn(v), g.neighboursOut(v));
                 }
@@ -219,9 +220,17 @@ unittest
 {
     import std.stdio, std.typecons;
 
-    void clusterTest1(bool directed = false)()
+    void clusterTest1(Graph)()
+        if (isGraph!Graph)
     {
-        auto g = new Graph!directed;
+        static if (is(Graph == class))
+        {
+            auto g = new Graph;
+        }
+        else
+        {
+            auto g = Graph;
+        }
         bool[] ignore = new bool[5];
         g.addVertices(5);
         g.addEdge(0, 1);
@@ -235,9 +244,17 @@ unittest
         writeln("largest cluster size = ", largest);
     }
 
-    void clusterTest2(bool directed = false)()
+    void clusterTest2(Graph)()
+        if (isGraph!Graph)
     {
-        auto g = new Graph!directed;
+        static if (is(Graph == class))
+        {
+            auto g = new Graph;
+        }
+        else
+        {
+            auto g = Graph;
+        }
         bool ignore[] = new bool[100];
         g.addVertices(100);
         foreach (immutable i; 0 .. 100)
@@ -255,9 +272,17 @@ unittest
         }
     }
 
-    void clusterTest3(bool directed = false)(immutable size_t n)
+    void clusterTest3(Graph)(immutable size_t n)
+        if (isGraph!Graph)
     {
-        auto g = new Graph!directed;
+        static if (is(Graph == class))
+        {
+            auto g = new Graph;
+        }
+        else
+        {
+            auto g = Graph;
+        }
         bool ignore[] = new bool[n];
         g.addVertices(n);
         foreach (immutable i; 0 .. n - 1)
@@ -269,12 +294,20 @@ unittest
         writeln("largest cluster size = ", largestClusterSize(g, ignore));
     }
 
-    void clusterTest50(bool directed = false)()
+    void clusterTest50(Graph)()
+        if (isGraph!Graph)
     {
         import std.random;
         import dgraph.test.samplegraph50;
 
-        auto g = new Graph!directed;
+        static if (is(Graph == class))
+        {
+            auto g = new Graph;
+        }
+        else
+        {
+            auto g = Graph;
+        }
         bool ignore[] = new bool[50];
         g.addVertices(50);
         g.addEdge(sampleGraph50);
@@ -293,14 +326,14 @@ unittest
 
     }
 
-    clusterTest1!false();
-    clusterTest2!false();
-    clusterTest1!true();
-    clusterTest2!true();
+    clusterTest1!(IndexedEdgeList!false)();
+    clusterTest2!(IndexedEdgeList!false)();
+    clusterTest1!(IndexedEdgeList!true)();
+    clusterTest2!(IndexedEdgeList!true)();
 
-    clusterTest50!false();
-    clusterTest50!true();
+    clusterTest50!(IndexedEdgeList!false)();
+    clusterTest50!(IndexedEdgeList!true)();
 
-    clusterTest3!false(40);
-    clusterTest3!true(40);
+    clusterTest3!(IndexedEdgeList!false)(40);
+    clusterTest3!(IndexedEdgeList!true)(40);
 }

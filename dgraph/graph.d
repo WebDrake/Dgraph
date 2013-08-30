@@ -25,9 +25,83 @@
 
 module dgraph.graph;
 
-import std.algorithm, std.array, std.conv, std.range;
+import std.algorithm, std.array, std.conv, std.range, std.traits;
 
-final class Graph(bool dir)
+template isGraph(G)
+{
+    static if (!__traits(hasMember, G, "directed") ||
+               !__traits(hasMember, G, "edge") ||
+               !__traits(hasMember, G, "edgeCount") ||
+               !__traits(hasMember, G, "vertexCount") ||
+               !__traits(hasMember, G, "isEdge") ||
+               !__traits(hasMember, G, "edgeID") ||
+               !__traits(hasMember, G, "addEdge") ||
+               !__traits(hasMember, G, "degreeIn") ||
+               !__traits(hasMember, G, "degreeOut") ||
+               !__traits(hasMember, G, "incidentEdgesIn") ||
+               !__traits(hasMember, G, "incidentEdgesOut") ||
+               !__traits(hasMember, G, "neighboursIn") ||
+               !__traits(hasMember, G, "neighboursOut"))
+    {
+        enum bool isGraph = false;
+    }
+    else static if (!isBoolean!(typeof(G.directed)))
+    {
+        enum bool isGraph = false;
+    }
+    else static if (G.directed && (__traits(hasMember, G, "degree") ||
+                                   __traits(hasMember, G, "incidentEdges") ||
+                                   __traits(hasMember, G, "neighbours")))
+    {
+        enum bool isGraph = false;
+    }
+    else static if (!G.directed && (!__traits(hasMember, G, "degree") ||
+                                    !__traits(hasMember, G, "incidentEdges") ||
+                                    !__traits(hasMember, G, "neighbours")))
+    {
+        enum bool isGraph = false;
+    }
+    else
+    {
+        enum bool isGraph = true;
+    }
+}
+
+template isDirectedGraph(G)
+{
+    static if (isGraph!G)
+    {
+        enum bool isDirectedGraph = G.directed;
+    }
+    else
+    {
+        enum bool isDirectedGraph = false;
+    }
+}
+
+template isUndirectedGraph(G)
+{
+    static if (isGraph!G)
+    {
+        enum bool isUndirectedGraph = !G.directed;
+    }
+    else
+    {
+        enum bool isUndirectedGraph = false;
+    }
+}
+
+unittest
+{
+    assert(isGraph!(IndexedEdgeList!true));
+    assert(isGraph!(IndexedEdgeList!false));
+    assert(isDirectedGraph!(IndexedEdgeList!true));
+    assert(!isDirectedGraph!(IndexedEdgeList!false));
+    assert(!isUndirectedGraph!(IndexedEdgeList!true));
+    assert(isUndirectedGraph!(IndexedEdgeList!false));
+}
+
+final class IndexedEdgeList(bool dir)
 {
   private:
     size_t[] _head;
@@ -506,7 +580,7 @@ final class Graph(bool dir)
 unittest
 {
     import std.stdio;
-    auto g1 = new Graph!false;
+    auto g1 = new IndexedEdgeList!false;
     g1.addVertices(10);
     assert(g1.vertexCount == 10);
     g1.addEdge(5, 8);
@@ -571,7 +645,7 @@ unittest
         assert(i == g1.edgeID(t, h));
     }
 
-    auto g2 = new Graph!true;
+    auto g2 = new IndexedEdgeList!true;
     g2.addVertices(10);
     assert(g2.vertexCount == 10);
     g2.addEdge(5, 8);
