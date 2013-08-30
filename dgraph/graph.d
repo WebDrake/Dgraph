@@ -25,7 +25,53 @@
 
 module dgraph.graph;
 
-import std.algorithm, std.array, std.conv, std.range;
+import std.algorithm, std.array, std.conv, std.range, std.traits;
+
+template isGraph(G)
+{
+    static if (!__traits(hasMember, G, "directed") ||
+               !__traits(hasMember, G, "edge") ||
+               !__traits(hasMember, G, "edgeCount") ||
+               !__traits(hasMember, G, "vertexCount") ||
+               !__traits(hasMember, G, "isEdge") ||
+               !__traits(hasMember, G, "edgeID") ||
+               !__traits(hasMember, G, "addEdge") ||
+               !__traits(hasMember, G, "degreeIn") ||
+               !__traits(hasMember, G, "degreeOut") ||
+               !__traits(hasMember, G, "incidentEdgesIn") ||
+               !__traits(hasMember, G, "incidentEdgesOut") ||
+               !__traits(hasMember, G, "neighboursIn") ||
+               !__traits(hasMember, G, "neighboursOut"))
+    {
+        enum bool isGraph = false;
+    }
+    else static if (!isBoolean!(typeof(G.directed)))
+    {
+        enum bool isGraph = false;
+    }
+    else static if (G.directed && (__traits(hasMember, G, "degree") ||
+                                   __traits(hasMember, G, "incidentEdges") ||
+                                   __traits(hasMember, G, "neighbours")))
+    {
+        enum bool isGraph = false;
+    }
+    else static if (!G.directed && (!__traits(hasMember, G, "degree") ||
+                                    !__traits(hasMember, G, "incidentEdges") ||
+                                    !__traits(hasMember, G, "neighbours")))
+    {
+        enum bool isGraph = false;
+    }
+    else
+    {
+        enum bool isGraph = true;
+    }
+}
+
+unittest
+{
+    assert(isGraph!(Graph!true));
+    assert(isGraph!(Graph!false));
+}
 
 final class Graph(bool dir)
 {
