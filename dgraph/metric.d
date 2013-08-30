@@ -70,7 +70,7 @@ unittest
     assert(q.empty);
 }
 
-auto betweenness(T = double, bool directed)(ref Graph!directed g, bool[] ignore)
+auto betweenness(T = double, bool directed)(ref Graph!directed g, bool[] ignore = null)
     if (isFloatingPoint!T)
 {
     T[] centrality = new T[g.vertexCount];
@@ -80,7 +80,7 @@ auto betweenness(T = double, bool directed)(ref Graph!directed g, bool[] ignore)
     T[] delta = new T[g.vertexCount];
     long[] d = new long[g.vertexCount];
     auto q = VertexQueue(g.vertexCount);
-    size_t[][] p = new size_t[][g.vertexCount];
+    Appender!(size_t[])[] p = new Appender!(size_t[])[g.vertexCount];
 
     sigma[] = to!T(0);
     delta[] = to!T(0);
@@ -88,70 +88,74 @@ auto betweenness(T = double, bool directed)(ref Graph!directed g, bool[] ignore)
 
     foreach (immutable s; 0 .. g.vertexCount)
     {
-        if (!ignore[s])
+        if (ignore && ignore[s])
         {
-            size_t stackLength = 0;
-            assert(q.empty);
-            sigma[s] = to!T(1);
-            d[s] = 0L;
-            q.push(s);
+            continue;
+        }
 
-            while(!q.empty)
+        size_t stackLength = 0;
+        assert(q.empty);
+        sigma[s] = to!T(1);
+        d[s] = 0L;
+        q.push(s);
+
+        while (!q.empty)
+        {
+            size_t v = q.front;
+            q.pop();
+            stack[stackLength] = v;
+            ++stackLength;
+            foreach (immutable w; g.neighboursOut(v))
             {
-                size_t v = q.front;
-                q.pop();
-                stack[stackLength] = v;
-                ++stackLength;
-                foreach (immutable w; g.neighboursOut(v))
+                if (ignore && ignore[w])
                 {
-                    if (!ignore[w])
-                    {
-                        if (d[w] < 0L)
-                        {
-                            q.push(w);
-                            d[w] = d[v] + 1L;
-                            assert(sigma[w] == to!T(0));
-                            sigma[w] = sigma[v];
-                            p[w].length = 1;
-                            p[w][0] = v;
-                        }
-                        else if (d[w] > (d[v] + 1L))
-                        {
-                            /* w has already been encountered, but we've
-                               found a shorter path to the source.  This
-                               is probably only relevant to the weighted
-                               case, but let's keep it here in order to
-                               be ready for that update. */
-                            d[w] = d[v] + 1L;
-                            sigma[w] = sigma[v];
-                            p[w].length = 1;
-                            p[w][0] = v;
-                        }
-                        else if (d[w] == (d[v] + 1L))
-                        {
-                            sigma[w] += sigma[v];
-                            p[w] ~= v;
-                        }
-                    }
+                    continue;
+                }
+
+                if (d[w] < 0L)
+                {
+                    q.push(w);
+                    d[w] = d[v] + 1L;
+                    assert(sigma[w] == to!T(0));
+                    sigma[w] = sigma[v];
+                    p[w].clear;
+                    p[w].put(v);
+                }
+                else if (d[w] > (d[v] + 1L))
+                {
+                    /* w has already been encountered, but we've
+                       found a shorter path to the source.  This
+                       is probably only relevant to the weighted
+                       case, but let's keep it here in order to
+                       be ready for that update. */
+                    d[w] = d[v] + 1L;
+                    sigma[w] = sigma[v];
+                    p[w].clear;
+                    p[w].put(v);
+                }
+                else if (d[w] == (d[v] + 1L))
+                {
+                    sigma[w] += sigma[v];
+                    p[w].put(v);
                 }
             }
+        }
 
-            while(stackLength > to!size_t(0))
+        while (stackLength > to!size_t(0))
+        {
+            --stackLength;
+            auto w = stack[stackLength];
+            foreach (immutable v; p[w].data)
             {
-                --stackLength;
-                auto w = stack[stackLength];
-                foreach (immutable v; p[w])
-                {
-                    delta[v] += ((sigma[v] / sigma[w]) * (to!T(1) + delta[w]));
-                }
-                if (w != s)
-                {
-                    centrality[w] += delta[w];
-                }
-                sigma[w] = to!T(0);
-                delta[w] = to!T(0);
-                d[w] = -1L;
+                delta[v] += ((sigma[v] / sigma[w]) * (to!T(1) + delta[w]));
             }
+            if (w != s)
+            {
+                centrality[w] += delta[w];
+            }
+            sigma[w] = to!T(0);
+            delta[w] = to!T(0);
+            d[w] = -1L;
         }
     }
 
