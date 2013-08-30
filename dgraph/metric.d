@@ -80,7 +80,7 @@ auto betweenness(T = double, bool directed)(ref Graph!directed g, bool[] ignore 
     T[] delta = new T[g.vertexCount];
     long[] d = new long[g.vertexCount];
     auto q = VertexQueue(g.vertexCount);
-    size_t[][] p = new size_t[][g.vertexCount];
+    Appender!(size_t[])[] p = new Appender!(size_t[])[g.vertexCount];
 
     sigma[] = to!T(0);
     delta[] = to!T(0);
@@ -118,8 +118,8 @@ auto betweenness(T = double, bool directed)(ref Graph!directed g, bool[] ignore 
                     d[w] = d[v] + 1L;
                     assert(sigma[w] == to!T(0));
                     sigma[w] = sigma[v];
-                    p[w].length = 1;
-                    p[w][0] = v;
+                    p[w].clear;
+                    p[w].put(v);
                 }
                 else if (d[w] > (d[v] + 1L))
                 {
@@ -130,22 +130,22 @@ auto betweenness(T = double, bool directed)(ref Graph!directed g, bool[] ignore 
                        be ready for that update. */
                     d[w] = d[v] + 1L;
                     sigma[w] = sigma[v];
-                    p[w].length = 1;
-                    p[w][0] = v;
+                    p[w].clear;
+                    p[w].put(v);
                 }
                 else if (d[w] == (d[v] + 1L))
                 {
                     sigma[w] += sigma[v];
-                    p[w] ~= v;
+                    p[w].put(v);
                 }
             }
         }
 
-        while(stackLength > to!size_t(0))
+        while (stackLength > to!size_t(0))
         {
             --stackLength;
             auto w = stack[stackLength];
-            foreach (immutable v; p[w])
+            foreach (immutable v; p[w].data)
             {
                 delta[v] += ((sigma[v] / sigma[w]) * (to!T(1) + delta[w]));
             }
