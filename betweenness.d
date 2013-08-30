@@ -5,9 +5,7 @@ import dgraph.graph, dgraph.metric, dgraph.test.samplegraph50;
 void betw(bool directed)(ref Graph!directed g)
 {
     assert(!directed);
-    auto ignore = new bool[g.vertexCount];
-    ignore[] = false;
-    auto centrality = betweenness(g, ignore);
+    auto centrality = betweenness(g);
     assert(centrality.length == g.vertexCount);
 /*    writeln("Centrality values:");
     foreach (immutable i, immutable c; centrality)
