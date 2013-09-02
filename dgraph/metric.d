@@ -326,14 +326,14 @@ unittest
 
     }
 
-    clusterTest1!(IndexedEdgeList!false)();
-    clusterTest2!(IndexedEdgeList!false)();
-    clusterTest1!(IndexedEdgeList!true)();
-    clusterTest2!(IndexedEdgeList!true)();
+    clusterTest1!(CachedEdgeList!false)();
+    clusterTest2!(CachedEdgeList!false)();
+    clusterTest1!(CachedEdgeList!true)();
+    clusterTest2!(CachedEdgeList!true)();
 
-    clusterTest50!(IndexedEdgeList!false)();
-    clusterTest50!(IndexedEdgeList!true)();
+    clusterTest50!(CachedEdgeList!false)();
+    clusterTest50!(CachedEdgeList!true)();
 
-    clusterTest3!(IndexedEdgeList!false)(40);
-    clusterTest3!(IndexedEdgeList!true)(40);
+    clusterTest3!(CachedEdgeList!false)(40);
+    clusterTest3!(CachedEdgeList!true)(40);
 }

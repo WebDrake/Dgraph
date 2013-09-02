@@ -16,7 +16,7 @@ void betw(Graph)(ref Graph g)
 
 void main()
 {
-    alias Graph = IndexedEdgeList!false;
+    alias Graph = CachedEdgeList!false;
     auto g = new Graph;
     g.addVertices(10_000);
 

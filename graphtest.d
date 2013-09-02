@@ -26,8 +26,7 @@ import dgraph.graph, dgraph.test.tests, dgraph.test.samplegraph50,
 
 void main()
 {
-    alias G = IndexedEdgeList;
-    enum bool dir = false;
+    alias Graph = CachedEdgeList!false;
     StopWatch watch;
 
     writeln("Let's benchmark some simple graph creation scenarios.");
@@ -39,9 +38,9 @@ void main()
     watch.start;
 	foreach (immutable _; 0 .. 100_000)
     {
-		testAddEdge!(G!dir, true, 0)(50, sampleGraph50);
+		testAddEdge!(Graph, true, 0)(50, sampleGraph50);
     }
-    testAddEdge!(G!dir, true, 1)(50, sampleGraph50);
+    testAddEdge!(Graph, true, 1)(50, sampleGraph50);
     watch.stop;
     writeln("Done in ", watch.peek.msecs, " ms.");
     writeln;
@@ -53,9 +52,9 @@ void main()
     watch.start;
     foreach (immutable _; 0 .. 1_000)
     {
-        testAddEdge!(G!dir, true, 0)(10_000, sampleGraph10k);
+        testAddEdge!(Graph, true, 0)(10_000, sampleGraph10k);
     }
-    testAddEdge!(G!dir, true, 1)(10_000, sampleGraph10k);
+    testAddEdge!(Graph, true, 1)(10_000, sampleGraph10k);
     watch.stop;
     writeln("Done in ", watch.peek.msecs, " ms.");
 }

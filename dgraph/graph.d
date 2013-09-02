@@ -93,15 +93,15 @@ template isUndirectedGraph(G)
 
 unittest
 {
-    assert(isGraph!(IndexedEdgeList!true));
-    assert(isGraph!(IndexedEdgeList!false));
-    assert(isDirectedGraph!(IndexedEdgeList!true));
-    assert(!isDirectedGraph!(IndexedEdgeList!false));
-    assert(!isUndirectedGraph!(IndexedEdgeList!true));
-    assert(isUndirectedGraph!(IndexedEdgeList!false));
+    assert(isGraph!(CachedEdgeList!true));
+    assert(isGraph!(CachedEdgeList!false));
+    assert(isDirectedGraph!(CachedEdgeList!true));
+    assert(!isDirectedGraph!(CachedEdgeList!false));
+    assert(!isUndirectedGraph!(CachedEdgeList!true));
+    assert(isUndirectedGraph!(CachedEdgeList!false));
 }
 
-final class IndexedEdgeList(bool dir)
+final class CachedEdgeList(bool dir)
 {
   private:
     size_t[] _head;
@@ -580,7 +580,7 @@ final class IndexedEdgeList(bool dir)
 unittest
 {
     import std.stdio;
-    auto g1 = new IndexedEdgeList!false;
+    auto g1 = new CachedEdgeList!false;
     g1.addVertices(10);
     assert(g1.vertexCount == 10);
     g1.addEdge(5, 8);
@@ -645,7 +645,7 @@ unittest
         assert(i == g1.edgeID(t, h));
     }
 
-    auto g2 = new IndexedEdgeList!true;
+    auto g2 = new CachedEdgeList!true;
     g2.addVertices(10);
     assert(g2.vertexCount == 10);
     g2.addEdge(5, 8);
