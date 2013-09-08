@@ -425,6 +425,11 @@ final class IndexedEdgeList(bool dir)
 
 final class CachedEdgeList(bool dir)
 {
+  /* WARNING!! This should be private but has to be public for now due to
+   * D Issue #10996: http://d.puremagic.com/issues/show_bug.cgi?id=10996
+   *
+   * Do not make use of CachedEdgeList._graph directly.
+   */
   public:
     IndexedEdgeList!dir _graph;
 
