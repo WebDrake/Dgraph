@@ -93,6 +93,13 @@ template isUndirectedGraph(G)
 
 unittest
 {
+    assert(isGraph!(IndexedEdgeList!true));
+    assert(isGraph!(IndexedEdgeList!false));
+    assert(isDirectedGraph!(IndexedEdgeList!true));
+    assert(!isDirectedGraph!(IndexedEdgeList!false));
+    assert(!isUndirectedGraph!(IndexedEdgeList!true));
+    assert(isUndirectedGraph!(IndexedEdgeList!false));
+
     assert(isGraph!(CachedEdgeList!true));
     assert(isGraph!(CachedEdgeList!false));
     assert(isDirectedGraph!(CachedEdgeList!true));
@@ -101,7 +108,7 @@ unittest
     assert(isUndirectedGraph!(CachedEdgeList!false));
 }
 
-final class CachedEdgeList(bool dir)
+final class IndexedEdgeList(bool dir)
 {
   private:
     size_t[] _head;
@@ -110,21 +117,6 @@ final class CachedEdgeList(bool dir)
     size_t[] _indexTail;
     size_t[] _sumHead = [0];
     size_t[] _sumTail = [0];
-    size_t[] _neighboursCache;
-    size_t[] _incidentEdgesCache;
-
-    static if (directed)
-    {
-        size_t[][] _neighboursIn;
-        size_t[][] _neighboursOut;
-        size_t[][] _incidentEdgesIn;
-        size_t[][] _incidentEdgesOut;
-    }
-    else
-    {
-        size_t[][] _neighbours;
-        size_t[][] _incidentEdges;
-    }
 
     void indexEdgesInsertion()
     {
@@ -321,6 +313,147 @@ final class CachedEdgeList(bool dir)
         alias degreeIn = degree;
         alias degreeOut = degree;
     }
+
+    static if (directed)
+    {
+        auto incidentEdgesIn(immutable size_t v)
+        {
+            return iota(_sumTail[v], _sumTail[v + 1]).map!(a => _indexTail[a]);
+        }
+
+        auto incidentEdgesOut(immutable size_t v)
+        {
+            return iota(_sumHead[v], _sumHead[v + 1]).map!(a => _indexHead[a]);
+        }
+    }
+    else
+    {
+        auto incidentEdges(immutable size_t v)
+        {
+            return chain(iota(_sumTail[v], _sumTail[v + 1]).map!(a => _indexTail[a]),
+                         iota(_sumHead[v], _sumHead[v + 1]).map!(a => _indexHead[a]));
+        }
+
+        alias incidentEdgesIn  = incidentEdges;
+        alias incidentEdgesOut = incidentEdges;
+    }
+
+    static if (directed)
+    {
+        auto neighboursIn(immutable size_t v) const
+        {
+            return iota(_sumTail[v], _sumTail[v + 1]).map!(a => _head[_indexTail[a]]);
+        }
+
+        auto neighboursOut(immutable size_t v) const
+        {
+            return iota(_sumHead[v], _sumHead[v + 1]).map!(a => _tail[_indexHead[a]]);
+        }
+    }
+    else
+    {
+        auto neighbours(immutable size_t v) const
+        {
+            return chain(iota(_sumTail[v], _sumTail[v + 1]).map!(a => _head[_indexTail[a]]),
+                         iota(_sumHead[v], _sumHead[v + 1]).map!(a => _tail[_indexHead[a]]));
+        }
+
+        alias neighbors = neighbours;
+        alias neighboursIn  = neighbours;
+        alias neighboursOut = neighbours;
+    }
+
+    alias neighborsIn = neighboursIn;
+    alias neighborsOut = neighboursOut;
+
+    void addVertices(immutable size_t n)
+    {
+        immutable size_t l = _sumHead.length;
+        _sumHead.length += n;
+        _sumTail.length += n;
+        assert(_sumHead.length == _sumTail.length);
+        _sumHead[l .. $] = _sumHead[l - 1];
+        _sumTail[l .. $] = _sumTail[l - 1];
+    }
+
+    void addEdge()(size_t head, size_t tail)
+    {
+        assert(head < this.vertexCount, text("Edge head ", head, " is greater than vertex count ", this.vertexCount));
+        assert(tail < this.vertexCount, text("Edge tail ", tail, " is greater than vertex count ", this.vertexCount));
+        static if (!directed)
+        {
+            if (tail < head)
+            {
+                swap(head, tail);
+            }
+        }
+        _head ~= head;
+        _tail ~= tail;
+        indexEdgesInsertion();
+        ++_sumHead[head + 1 .. $];
+        ++_sumTail[tail + 1 .. $];
+    }
+
+    void addEdge(T : size_t)(T[] edgeList)
+    {
+        assert(edgeList.length % 2 == 0);
+        assert(_head.length == _tail.length);
+        immutable size_t l = _head.length;
+        _head.length += edgeList.length / 2;
+        _tail.length += edgeList.length / 2;
+        foreach (immutable i; 0 .. edgeList.length / 2)
+        {
+            size_t head = edgeList[2 * i];
+            size_t tail = edgeList[2 * i + 1];
+            assert(head < this.vertexCount, text("Edge head ", head, " is greater than vertex count ", this.vertexCount));
+            assert(tail < this.vertexCount, text("Edge tail ", tail, " is greater than vertex count ", this.vertexCount));
+            static if (!directed)
+            {
+                if (tail < head)
+                {
+                    swap(head, tail);
+                }
+            }
+            _head[l + i] = head;
+            _tail[l + i] = tail;
+        }
+        indexEdgesSort();
+        sumEdges(_sumHead, _head, _indexHead);
+        sumEdges(_sumTail, _tail, _indexTail);
+    }
+}
+
+final class CachedEdgeList(bool dir)
+{
+  public:
+    IndexedEdgeList!dir _graph;
+
+  private:
+    size_t[] _neighboursCache;
+    size_t[] _incidentEdgesCache;
+
+    static if (directed)
+    {
+        size_t[][] _neighboursIn;
+        size_t[][] _neighboursOut;
+        size_t[][] _incidentEdgesIn;
+        size_t[][] _incidentEdgesOut;
+    }
+    else
+    {
+        size_t[][] _neighbours;
+        size_t[][] _incidentEdges;
+    }
+
+  public:
+    this()
+    {
+        _graph = new IndexedEdgeList!dir;
+    }
+
+    alias dir directed;
+
+    alias _graph this;
 
     static if (directed)
     {
@@ -579,131 +712,141 @@ final class CachedEdgeList(bool dir)
 
 unittest
 {
-    import std.stdio;
-    auto g1 = new CachedEdgeList!false;
-    g1.addVertices(10);
-    assert(g1.vertexCount == 10);
-    g1.addEdge(5, 8);
-    g1.addEdge(5, 4);
-    g1.addEdge(7, 4);
-    g1.addEdge(3, 4);
-    g1.addEdge(6, 9);
-    g1.addEdge(3, 2);
-    foreach (immutable head, immutable tail; g1.edge)
+    import std.stdio, std.typetuple;
+    foreach (Graph; TypeTuple!(IndexedEdgeList, CachedEdgeList))
     {
-        writeln("\t", head, "\t", tail);
-    }
-    writeln(g1._indexHead);
-    writeln(g1._indexTail);
-    writeln(g1._sumHead);
-    writeln(g1._sumTail);
-    foreach (immutable v; 0 .. g1.vertexCount)
-    {
-        writeln("\td(", v, ") =\t", g1.degree(v), "\tn(", v, ") = ", g1.neighbours(v), "\ti(", v, ") = ", g1.incidentEdges(v));
-        foreach (immutable e, immutable n; zip(g1.incidentEdges(v), g1.neighbours(v)))
+        writeln;
+        auto g1 = new Graph!false;
+        g1.addVertices(10);
+        assert(g1.vertexCount == 10);
+        g1.addEdge(5, 8);
+        g1.addEdge(5, 4);
+        g1.addEdge(7, 4);
+        g1.addEdge(3, 4);
+        g1.addEdge(6, 9);
+        g1.addEdge(3, 2);
+        foreach (immutable head, immutable tail; g1.edge)
         {
-            if (g1.edge[e][0] == v)
+            writeln("\t", head, "\t", tail);
+        }
+        writeln(g1._indexHead);
+        writeln(g1._indexTail);
+        writeln(g1._sumHead);
+        writeln(g1._sumTail);
+        foreach (immutable v; 0 .. g1.vertexCount)
+        {
+            writeln("\td(", v, ") =\t", g1.degree(v), "\tn(", v, ") = ", g1.neighbours(v), "\ti(", v, ") = ", g1.incidentEdges(v));
+            foreach (immutable e, immutable n; zip(g1.incidentEdges(v), g1.neighbours(v)))
             {
-                assert(g1.edge[e][1] == n);
-            }
-            else
-            {
-                assert(g1.edge[e][1] == v);
-                assert(g1.edge[e][0] == n);
+                if (g1.edge[e][0] == v)
+                {
+                    assert(g1.edge[e][1] == n);
+                }
+                else
+                {
+                    assert(g1.edge[e][1] == v);
+                    assert(g1.edge[e][0] == n);
+                }
             }
         }
-    }
-    writeln(g1._neighboursCache);
-    writeln(g1._incidentEdgesCache);
-    writeln;
-    assert(iota(g1._head.length).map!(a => g1._head[g1._indexHead[a]]).isSorted);
-    assert(iota(g1._tail.length).map!(a => g1._tail[g1._indexTail[a]]).isSorted);
-    foreach (immutable h; 0 .. 10)
-    {
-        foreach (immutable t; 0 .. 10)
+        static if (is(typeof(g1) == CachedEdgeList!false))
         {
-            if ((h == 5 && t == 8) || (h == 8 && t == 5) ||
-                (h == 5 && t == 4) || (h == 4 && t == 5) ||
-                (h == 7 && t == 4) || (h == 4 && t == 7) ||
-                (h == 3 && t == 4) || (h == 4 && t == 3) ||
-                (h == 6 && t == 9) || (h == 9 && t == 6) ||
-                (h == 3 && t == 2) || (h == 2 && t == 3))
+            writeln(g1._neighboursCache);
+            writeln(g1._incidentEdgesCache);
+        }
+        writeln;
+        assert(iota(g1._head.length).map!(a => g1._head[g1._indexHead[a]]).isSorted);
+        assert(iota(g1._tail.length).map!(a => g1._tail[g1._indexTail[a]]).isSorted);
+        foreach (immutable h; 0 .. 10)
+        {
+            foreach (immutable t; 0 .. 10)
             {
-                assert(g1.isEdge(h, t), text("isEdge failure for edge (", h, ", ", t, ")"));
-            }
-            else
-            {
-                assert(!g1.isEdge(h, t), text("isEdge false positive for edge (", h, ", ", t, ")"));
+                if ((h == 5 && t == 8) || (h == 8 && t == 5) ||
+                    (h == 5 && t == 4) || (h == 4 && t == 5) ||
+                    (h == 7 && t == 4) || (h == 4 && t == 7) ||
+                    (h == 3 && t == 4) || (h == 4 && t == 3) ||
+                    (h == 6 && t == 9) || (h == 9 && t == 6) ||
+                    (h == 3 && t == 2) || (h == 2 && t == 3))
+                {
+                    assert(g1.isEdge(h, t), text("isEdge failure for edge (", h, ", ", t, ")"));
+                }
+                else
+                {
+                    assert(!g1.isEdge(h, t), text("isEdge false positive for edge (", h, ", ", t, ")"));
+                }
             }
         }
-    }
-    foreach (immutable i; 0 .. g1.edgeCount)
-    {
-        size_t h = g1._head[i];
-        size_t t = g1._tail[i];
-        assert(i == g1.edgeID(h, t));
-        assert(i == g1.edgeID(t, h));
-    }
-
-    auto g2 = new CachedEdgeList!true;
-    g2.addVertices(10);
-    assert(g2.vertexCount == 10);
-    g2.addEdge(5, 8);
-    g2.addEdge(5, 4);
-    g2.addEdge(7, 4);
-    g2.addEdge(3, 4);
-    g2.addEdge(6, 9);
-    g2.addEdge(3, 2);
-    foreach (immutable head, immutable tail; g2.edge)
-        writeln("\t", head, "\t", tail);
-    writeln(g2._indexHead);
-    writeln(g2._indexTail);
-    writeln(g2._sumHead);
-    writeln(g2._sumTail);
-    foreach (immutable v; 0 .. g2.vertexCount)
-    {
-        writeln("\td_out(", v, ") =\t", g2.degreeOut(v), "\tn_out(", v, ") = ", g2.neighboursOut(v), "\ti_out(", v, ") = ", g2.incidentEdgesOut(v),
-                "\td_in(", v, ") =\t", g2.degreeIn(v), "\tn_in(", v, ") = ", g2.neighboursIn(v), "\ti_in(", v, ") = ", g2.incidentEdgesIn(v));
-
-        foreach (immutable e, immutable n; zip(g2.incidentEdgesIn(v), g2.neighboursIn(v)))
+        foreach (immutable i; 0 .. g1.edgeCount)
         {
-            assert(g2.edge[e][0] == n);
-            assert(g2.edge[e][1] == v);
+            size_t h = g1._head[i];
+            size_t t = g1._tail[i];
+            assert(i == g1.edgeID(h, t));
+            assert(i == g1.edgeID(t, h));
         }
 
-        foreach (immutable e, immutable n; zip(g2.incidentEdgesOut(v), g2.neighboursOut(v)))
+        auto g2 = new Graph!true;
+        g2.addVertices(10);
+        assert(g2.vertexCount == 10);
+        g2.addEdge(5, 8);
+        g2.addEdge(5, 4);
+        g2.addEdge(7, 4);
+        g2.addEdge(3, 4);
+        g2.addEdge(6, 9);
+        g2.addEdge(3, 2);
+        foreach (immutable head, immutable tail; g2.edge)
+            writeln("\t", head, "\t", tail);
+        writeln(g2._indexHead);
+        writeln(g2._indexTail);
+        writeln(g2._sumHead);
+        writeln(g2._sumTail);
+        foreach (immutable v; 0 .. g2.vertexCount)
         {
-            assert(g2.edge[e][0] == v);
-            assert(g2.edge[e][1] == n);
+            writeln("\td_out(", v, ") =\t", g2.degreeOut(v), "\tn_out(", v, ") = ", g2.neighboursOut(v), "\ti_out(", v, ") = ", g2.incidentEdgesOut(v),
+                    "\td_in(", v, ") =\t", g2.degreeIn(v), "\tn_in(", v, ") = ", g2.neighboursIn(v), "\ti_in(", v, ") = ", g2.incidentEdgesIn(v));
+
+            foreach (immutable e, immutable n; zip(g2.incidentEdgesIn(v), g2.neighboursIn(v)))
+            {
+                assert(g2.edge[e][0] == n);
+                assert(g2.edge[e][1] == v);
+            }
+
+            foreach (immutable e, immutable n; zip(g2.incidentEdgesOut(v), g2.neighboursOut(v)))
+            {
+                assert(g2.edge[e][0] == v);
+                assert(g2.edge[e][1] == n);
+            }
         }
-    }
-    writeln(g2._neighboursCache);
-    writeln(g2._incidentEdgesCache);
-    assert(iota(g2._head.length).map!(a => g2._head[g2._indexHead[a]]).isSorted);
-    assert(iota(g2._tail.length).map!(a => g2._tail[g2._indexTail[a]]).isSorted);
-    foreach (immutable h; 0 .. 10)
-    {
-        foreach (immutable t; 0 .. 10)
+        static if (is(typeof(g2) == CachedEdgeList!true))
         {
-            if ((h == 5 && t == 8) ||
-                (h == 5 && t == 4) ||
-                (h == 7 && t == 4) ||
-                (h == 3 && t == 4) ||
-                (h == 6 && t == 9) ||
-                (h == 3 && t == 2))
+            writeln(g2._neighboursCache);
+            writeln(g2._incidentEdgesCache);
+        }
+        assert(iota(g2._head.length).map!(a => g2._head[g2._indexHead[a]]).isSorted);
+        assert(iota(g2._tail.length).map!(a => g2._tail[g2._indexTail[a]]).isSorted);
+        foreach (immutable h; 0 .. 10)
+        {
+            foreach (immutable t; 0 .. 10)
             {
-                assert(g2.isEdge(h, t), text("isEdge failure for edge (", h, ", ", t, ")"));
-            }
-            else
-            {
-                assert(!g2.isEdge(h, t), text("isEdge false positive for edge (", h, ", ", t, ")"));
+                if ((h == 5 && t == 8) ||
+                    (h == 5 && t == 4) ||
+                    (h == 7 && t == 4) ||
+                    (h == 3 && t == 4) ||
+                    (h == 6 && t == 9) ||
+                    (h == 3 && t == 2))
+                {
+                    assert(g2.isEdge(h, t), text("isEdge failure for edge (", h, ", ", t, ")"));
+                }
+                else
+                {
+                    assert(!g2.isEdge(h, t), text("isEdge false positive for edge (", h, ", ", t, ")"));
+                }
             }
         }
-    }
-    foreach (immutable i; 0 .. g2.edgeCount)
-    {
-        size_t h = g2._head[i];
-        size_t t = g2._tail[i];
-        assert(i == g2.edgeID(h, t));
+        foreach (immutable i; 0 .. g2.edgeCount)
+        {
+            size_t h = g2._head[i];
+            size_t t = g2._tail[i];
+            assert(i == g2.edgeID(h, t));
+        }
     }
 }
