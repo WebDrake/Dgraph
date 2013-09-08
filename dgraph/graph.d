@@ -609,11 +609,7 @@ final class CachedEdgeList(bool dir)
         }
 
         immutable size_t l = _sumHead.length;
-        _sumHead.length += n;
-        _sumTail.length += n;
-        assert(_sumHead.length == _sumTail.length);
-        _sumHead[l .. $] = _sumHead[l - 1];
-        _sumTail[l .. $] = _sumTail[l - 1];
+        _graph.addVertices(n);
 
         static if (directed)
         {
@@ -637,20 +633,7 @@ final class CachedEdgeList(bool dir)
 
     void addEdge()(size_t head, size_t tail)
     {
-        assert(head < this.vertexCount, text("Edge head ", head, " is greater than vertex count ", this.vertexCount));
-        assert(tail < this.vertexCount, text("Edge tail ", tail, " is greater than vertex count ", this.vertexCount));
-        static if (!directed)
-        {
-            if (tail < head)
-            {
-                swap(head, tail);
-            }
-        }
-        _head ~= head;
-        _tail ~= tail;
-        indexEdgesInsertion();
-        ++_sumHead[head + 1 .. $];
-        ++_sumTail[tail + 1 .. $];
+        _graph.addEdge(head, tail);
         _neighboursCache.length = 2 * _head.length;
         _incidentEdgesCache.length = 2 * _head.length;
         static if (directed)
@@ -669,30 +652,7 @@ final class CachedEdgeList(bool dir)
 
     void addEdge(T : size_t)(T[] edgeList)
     {
-        assert(edgeList.length % 2 == 0);
-        assert(_head.length == _tail.length);
-        immutable size_t l = _head.length;
-        _head.length += edgeList.length / 2;
-        _tail.length += edgeList.length / 2;
-        foreach (immutable i; 0 .. edgeList.length / 2)
-        {
-            size_t head = edgeList[2 * i];
-            size_t tail = edgeList[2 * i + 1];
-            assert(head < this.vertexCount, text("Edge head ", head, " is greater than vertex count ", this.vertexCount));
-            assert(tail < this.vertexCount, text("Edge tail ", tail, " is greater than vertex count ", this.vertexCount));
-            static if (!directed)
-            {
-                if (tail < head)
-                {
-                    swap(head, tail);
-                }
-            }
-            _head[l + i] = head;
-            _tail[l + i] = tail;
-        }
-        indexEdgesSort();
-        sumEdges(_sumHead, _head, _indexHead);
-        sumEdges(_sumTail, _tail, _indexTail);
+        _graph.addEdge(edgeList);
         _neighboursCache.length = 2 * _head.length;
         _incidentEdgesCache.length = 2 * _head.length;
         static if (directed)
