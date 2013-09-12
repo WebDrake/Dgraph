@@ -171,7 +171,7 @@ final class IndexedEdgeList(bool dir)
         _indexTail.multiSort!((a, b) => _tail[a] < _tail[b], (a, b) => _head[a] < _head[b]);
     }
 
-    void sumEdges(ref size_t[] sum, ref size_t[] vertex, ref size_t[] index)
+    void sumEdges(ref size_t[] sum, in size_t[] vertex, in size_t[] index) @safe const nothrow pure
     {
         assert(sum.length > 1);
 
@@ -189,24 +189,24 @@ final class IndexedEdgeList(bool dir)
   public:
     enum bool directed = dir;
 
-    auto edge() @property const pure nothrow
+    auto edge() @property @safe const nothrow pure
     {
         return zip(_head, _tail);
     }
 
-    size_t edgeCount() @property const pure nothrow
+    size_t edgeCount() @property @safe const nothrow pure
     {
         assert(_head.length == _tail.length);
         return _head.length;
     }
 
-    size_t vertexCount() @property const pure nothrow
+    size_t vertexCount() @property @safe const nothrow pure
     {
         assert(_sumHead.length == _sumTail.length);
         return _sumHead.length - 1;
     }
 
-    size_t vertexCount(immutable size_t n) @property pure
+    size_t vertexCount(in size_t n) @property @safe pure
     {
         immutable size_t l = _sumHead.length;
         if (n < (l - 1))
@@ -330,13 +330,13 @@ final class IndexedEdgeList(bool dir)
 
     static if (directed)
     {
-        size_t degreeIn(immutable size_t v) const pure nothrow
+        size_t degreeIn(in size_t v) @safe const nothrow pure
         {
             assert(v + 1 < _sumTail.length);
             return _sumTail[v + 1] - _sumTail[v];
         }
 
-        size_t degreeOut(immutable size_t v) const pure nothrow
+        size_t degreeOut(in size_t v) @safe const nothrow pure
         {
             assert(v + 1 < _sumHead.length);
             return _sumHead[v + 1] - _sumHead[v];
@@ -344,7 +344,7 @@ final class IndexedEdgeList(bool dir)
     }
     else
     {
-        size_t degree(immutable size_t v) const pure nothrow
+        size_t degree(in size_t v) @safe const nothrow pure
         {
             assert(v + 1 < _sumHead.length);
             assert(_sumHead.length == _sumTail.length);
@@ -358,19 +358,19 @@ final class IndexedEdgeList(bool dir)
 
     static if (directed)
     {
-        auto incidentEdgesIn(immutable size_t v)
+        auto incidentEdgesIn(in size_t v) const
         {
             return iota(_sumTail[v], _sumTail[v + 1]).map!(a => _indexTail[a]);
         }
 
-        auto incidentEdgesOut(immutable size_t v)
+        auto incidentEdgesOut(in size_t v) const
         {
             return iota(_sumHead[v], _sumHead[v + 1]).map!(a => _indexHead[a]);
         }
     }
     else
     {
-        auto incidentEdges(immutable size_t v)
+        auto incidentEdges(in size_t v) const
         {
             return chain(iota(_sumTail[v], _sumTail[v + 1]).map!(a => _indexTail[a]),
                          iota(_sumHead[v], _sumHead[v + 1]).map!(a => _indexHead[a]));
@@ -382,19 +382,19 @@ final class IndexedEdgeList(bool dir)
 
     static if (directed)
     {
-        auto neighboursIn(immutable size_t v) const
+        auto neighboursIn(in size_t v) const
         {
             return iota(_sumTail[v], _sumTail[v + 1]).map!(a => _head[_indexTail[a]]);
         }
 
-        auto neighboursOut(immutable size_t v) const
+        auto neighboursOut(in size_t v) const
         {
             return iota(_sumHead[v], _sumHead[v + 1]).map!(a => _tail[_indexHead[a]]);
         }
     }
     else
     {
-        auto neighbours(immutable size_t v) const
+        auto neighbours(in size_t v) const
         {
             return chain(iota(_sumTail[v], _sumTail[v + 1]).map!(a => _head[_indexTail[a]]),
                          iota(_sumHead[v], _sumHead[v + 1]).map!(a => _tail[_indexHead[a]]));
@@ -492,12 +492,12 @@ final class CachedEdgeList(bool dir)
 
     alias _graph this;
 
-    size_t vertexCount() @property const pure nothrow
+    size_t vertexCount() @property @safe const nothrow pure
     {
         return _graph.vertexCount;
     }
 
-    size_t vertexCount(immutable size_t n) @property pure
+    size_t vertexCount(in size_t n) @property @safe pure
     {
         static if (directed)
         {
@@ -546,7 +546,7 @@ final class CachedEdgeList(bool dir)
 
     static if (directed)
     {
-        auto incidentEdgesIn(immutable size_t v)
+        auto incidentEdgesIn(in size_t v) @safe nothrow pure
         {
             if (_incidentEdgesIn[v] is null)
             {
@@ -564,7 +564,7 @@ final class CachedEdgeList(bool dir)
             return _incidentEdgesIn[v];
         }
 
-        auto incidentEdgesOut(immutable size_t v)
+        auto incidentEdgesOut(in size_t v) @safe nothrow pure
         {
             if (_incidentEdgesOut[v] is null)
             {
@@ -584,7 +584,7 @@ final class CachedEdgeList(bool dir)
     }
     else
     {
-        auto incidentEdges(immutable size_t v)
+        auto incidentEdges(in size_t v) @safe nothrow pure
         {
             if (_incidentEdges[v] is null)
             {
@@ -613,7 +613,7 @@ final class CachedEdgeList(bool dir)
 
     static if (directed)
     {
-        auto neighboursIn(immutable size_t v)
+        auto neighboursIn(in size_t v) @safe nothrow pure
         {
             if (_neighboursIn[v] is null)
             {
@@ -631,7 +631,7 @@ final class CachedEdgeList(bool dir)
             return _neighboursIn[v];
         }
 
-        auto neighboursOut(immutable size_t v)
+        auto neighboursOut(in size_t v) @safe nothrow pure
         {
             if (_neighboursOut[v] is null)
             {
@@ -651,7 +651,7 @@ final class CachedEdgeList(bool dir)
     }
     else
     {
-        auto neighbours(immutable size_t v)
+        auto neighbours(in size_t v) @safe nothrow pure
         {
             if(_neighbours[v] is null)
             {
