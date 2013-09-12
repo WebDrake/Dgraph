@@ -457,15 +457,8 @@ final class IndexedEdgeList(bool dir)
 
 final class CachedEdgeList(bool dir)
 {
-  /* WARNING!! This should be private but has to be public for now due to
-   * D Issue #10996: http://d.puremagic.com/issues/show_bug.cgi?id=10996
-   *
-   * Do not make use of CachedEdgeList._graph directly.
-   */
-  public:
-    IndexedEdgeList!dir _graph;
-
   private:
+    IndexedEdgeList!dir _graph;
     size_t[] _neighboursCache;
     size_t[] _incidentEdgesCache;
 
@@ -488,9 +481,19 @@ final class CachedEdgeList(bool dir)
         _graph = new IndexedEdgeList!dir;
     }
 
+    alias _graph this;
+
     alias dir directed;
 
-    alias _graph this;
+    auto edge() @property @safe const nothrow pure
+    {
+        return _graph.edge;
+    }
+
+    size_t edgeCount() @property @safe const nothrow pure
+    {
+        return _graph.edgeCount;
+    }
 
     size_t vertexCount() @property @safe const nothrow pure
     {
@@ -542,6 +545,39 @@ final class CachedEdgeList(bool dir)
             }
         }
         return vertexCount;
+    }
+
+    bool isEdge(size_t head, size_t tail) const
+    {
+        return _graph.isEdge(head, tail);
+    }
+
+    size_t edgeID(size_t head, size_t tail) const
+    {
+        return _graph.edgeID(head, tail);
+    }
+
+    static if (directed)
+    {
+        size_t degreeIn(in size_t v) @safe const nothrow pure
+        {
+            return _graph.degreeIn(v);
+        }
+
+        size_t degreeOut(in size_t v) @safe const nothrow pure
+        {
+            return _graph.degreeOut(v);
+        }
+    }
+    else
+    {
+        size_t degree(in size_t v) @safe const nothrow pure
+        {
+            return _graph.degree(v);
+        }
+
+        alias degreeIn = degree;
+        alias degreeOut = degree;
     }
 
     static if (directed)
