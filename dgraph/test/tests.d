@@ -42,7 +42,7 @@ void testAddEdge(Graph, bool allAtOnce = false, ushort verbose = 0, T : size_t)
     {
         auto g = Graph;
     }
-    g.addVertices(v);
+    g.vertexCount = v;
 
     static if (allAtOnce)
     {

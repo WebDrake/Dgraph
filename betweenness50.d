@@ -18,7 +18,7 @@ void main()
 {
     alias Graph = CachedEdgeList!false;
     auto g = new Graph;
-    g.addVertices(50);
+    g.vertexCount = 50;
 
     foreach (immutable i; 0 .. sampleGraph50.length / 2)
     {

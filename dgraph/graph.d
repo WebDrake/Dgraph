@@ -206,6 +206,33 @@ final class IndexedEdgeList(bool dir)
         return _sumHead.length - 1;
     }
 
+    size_t vertexCount(immutable size_t n) @property pure
+    {
+        immutable size_t l = _sumHead.length;
+        if (n < (l - 1))
+        {
+            // Check that no edges are lost this way
+            if ((_sumHead[n] != _sumHead[$-1]) ||
+                (_sumTail[n] != _sumTail[$-1]))
+            {
+                throw new Exception("Cannot set vertexCount value without deleting edges");
+            }
+            else
+            {
+                _sumHead.length = n + 1;
+                _sumTail.length = n + 1;
+            }
+        }
+        else
+        {
+            _sumHead.length = n + 1;
+            _sumTail.length = n + 1;
+            _sumHead[l .. $] = _sumHead[l - 1];
+            _sumTail[l .. $] = _sumTail[l - 1];
+        }
+        return vertexCount;
+    }
+
     bool isEdge(size_t head, size_t tail) const
     {
         assert(head < vertexCount);
@@ -381,16 +408,6 @@ final class IndexedEdgeList(bool dir)
     alias neighborsIn = neighboursIn;
     alias neighborsOut = neighboursOut;
 
-    void addVertices(immutable size_t n)
-    {
-        immutable size_t l = _sumHead.length;
-        _sumHead.length += n;
-        _sumTail.length += n;
-        assert(_sumHead.length == _sumTail.length);
-        _sumHead[l .. $] = _sumHead[l - 1];
-        _sumTail[l .. $] = _sumTail[l - 1];
-    }
-
     void addEdge()(size_t head, size_t tail)
     {
         assert(head < this.vertexCount, text("Edge head ", head, " is greater than vertex count ", this.vertexCount));
@@ -474,6 +491,58 @@ final class CachedEdgeList(bool dir)
     alias dir directed;
 
     alias _graph this;
+
+    size_t vertexCount() @property const pure nothrow
+    {
+        return _graph.vertexCount;
+    }
+
+    size_t vertexCount(immutable size_t n) @property pure
+    {
+        static if (directed)
+        {
+            assert(_sumTail.length == _neighboursIn.length + 1);
+            assert(_sumHead.length == _neighboursOut.length + 1);
+            assert(_sumTail.length == _incidentEdgesIn.length + 1);
+            assert(_sumHead.length == _incidentEdgesOut.length + 1);
+        }
+        else
+        {
+            assert(_sumHead.length == _neighbours.length + 1);
+            assert(_sumTail.length == _incidentEdges.length + 1);
+        }
+
+        immutable size_t l = _sumHead.length;
+        _graph.vertexCount = n;
+
+        static if (directed)
+        {
+            _neighboursIn.length = n;
+            _neighboursOut.length = n;
+            _incidentEdgesIn.length = n;
+            _incidentEdgesOut.length = n;
+
+            if (n >= l)
+            {
+                _neighboursIn[l - 1 .. $] = null;
+                _neighboursOut[l - 1 .. $] = null;
+                _incidentEdgesIn[l - 1 .. $] = null;
+                _incidentEdgesOut[l - 1 .. $] = null;
+            }
+        }
+        else
+        {
+            _neighbours.length = n;
+            _incidentEdges.length = n;
+
+            if (n >= l)
+            {
+                _neighbours[l - 1 .. $] = null;
+                _incidentEdges[l - 1 .. $] = null;
+            }
+        }
+        return vertexCount;
+    }
 
     static if (directed)
     {
@@ -613,44 +682,6 @@ final class CachedEdgeList(bool dir)
     alias neighborsIn = neighboursIn;
     alias neighborsOut = neighboursOut;
 
-    void addVertices(immutable size_t n)
-    {
-        static if (directed)
-        {
-            assert(_sumTail.length == _neighboursIn.length + 1);
-            assert(_sumHead.length == _neighboursOut.length + 1);
-            assert(_sumTail.length == _incidentEdgesIn.length + 1);
-            assert(_sumHead.length == _incidentEdgesOut.length + 1);
-        }
-        else
-        {
-            assert(_sumHead.length == _neighbours.length + 1);
-            assert(_sumTail.length == _incidentEdges.length + 1);
-        }
-
-        immutable size_t l = _sumHead.length;
-        _graph.addVertices(n);
-
-        static if (directed)
-        {
-            _neighboursIn.length += n;
-            _neighboursOut.length += n;
-            _incidentEdgesIn.length += n;
-            _incidentEdgesOut.length += n;
-            _neighboursIn[l - 1 .. $] = null;
-            _neighboursOut[l - 1 .. $] = null;
-            _incidentEdgesIn[l - 1 .. $] = null;
-            _incidentEdgesOut[l - 1 .. $] = null;
-        }
-        else
-        {
-            _neighbours.length += n;
-            _incidentEdges.length += n;
-            _neighbours[l - 1 .. $] = null;
-            _incidentEdges[l - 1 .. $] = null;
-        }
-    }
-
     void addEdge()(size_t head, size_t tail)
     {
         _graph.addEdge(head, tail);
@@ -697,7 +728,7 @@ unittest
     {
         writeln;
         auto g1 = new Graph!false;
-        g1.addVertices(10);
+        g1.vertexCount = 10;
         assert(g1.vertexCount == 10);
         g1.addEdge(5, 8);
         g1.addEdge(5, 4);
@@ -734,7 +765,6 @@ unittest
             writeln(g1._neighboursCache);
             writeln(g1._incidentEdgesCache);
         }
-        writeln;
         assert(iota(g1._head.length).map!(a => g1._head[g1._indexHead[a]]).isSorted);
         assert(iota(g1._tail.length).map!(a => g1._tail[g1._indexTail[a]]).isSorted);
         foreach (immutable h; 0 .. 10)
@@ -763,9 +793,22 @@ unittest
             assert(i == g1.edgeID(h, t));
             assert(i == g1.edgeID(t, h));
         }
+        g1.vertexCount = 20;
+        g1.vertexCount = 10;
+        writeln("Recheck head/tail values for undirected network:");
+        foreach (immutable head, immutable tail; g1.edge)
+        {
+            writeln("\t", head, "\t", tail);
+        }
+        writeln(g1._indexHead);
+        writeln(g1._indexTail);
+        writeln(g1._sumHead);
+        writeln(g1._sumTail);
+        writeln("... last check done!");
+        writeln;
 
         auto g2 = new Graph!true;
-        g2.addVertices(10);
+        g2.vertexCount = 10;
         assert(g2.vertexCount == 10);
         g2.addEdge(5, 8);
         g2.addEdge(5, 4);
@@ -828,5 +871,18 @@ unittest
             size_t t = g2._tail[i];
             assert(i == g2.edgeID(h, t));
         }
+        g2.vertexCount = 20;
+        g2.vertexCount = 10;
+        writeln("Recheck head/tail values for directed network:");
+        foreach (immutable head, immutable tail; g2.edge)
+        {
+            writeln("\t", head, "\t", tail);
+        }
+        writeln(g2._indexHead);
+        writeln(g2._indexTail);
+        writeln(g2._sumHead);
+        writeln(g2._sumTail);
+        writeln("... last check done!");
+        writeln;
     }
 }

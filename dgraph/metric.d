@@ -232,7 +232,7 @@ unittest
             auto g = Graph;
         }
         bool[] ignore = new bool[5];
-        g.addVertices(5);
+        g.vertexCount = 5;
         g.addEdge(0, 1);
         g.addEdge(1, 2);
         g.addEdge(3, 4);
@@ -256,7 +256,7 @@ unittest
             auto g = Graph;
         }
         bool ignore[] = new bool[100];
-        g.addVertices(100);
+        g.vertexCount = 100;
         foreach (immutable i; 0 .. 100)
         {
             foreach (immutable j; i .. 100)
@@ -284,7 +284,7 @@ unittest
             auto g = Graph;
         }
         bool ignore[] = new bool[n];
-        g.addVertices(n);
+        g.vertexCount = n;
         foreach (immutable i; 0 .. n - 1)
         {
             g.addEdge(i, i + 1);
@@ -309,7 +309,7 @@ unittest
             auto g = Graph;
         }
         bool ignore[] = new bool[50];
-        g.addVertices(50);
+        g.vertexCount = 50;
         g.addEdge(sampleGraph50);
         writeln("[[50]] largest cluster size = ", largestClusterSize(g, ignore));
 
