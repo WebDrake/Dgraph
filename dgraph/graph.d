@@ -61,6 +61,21 @@ template isGraph(G)
     {
         enum bool isGraph = false;
     }
+    else static if (!isRandomAccessRange!(ReturnType!(G.incidentEdgesIn)) ||
+                    !isRandomAccessRange!(ReturnType!(G.incidentEdgesOut)))
+    {
+        enum bool isGraph = false;
+    }
+    else static if (!isRandomAccessRange!(ReturnType!(G.neighboursIn)) ||
+                    !isRandomAccessRange!(ReturnType!(G.neighboursOut)))
+    {
+        enum bool isGraph = false;
+    }
+    else static if (!G.directed && (!isRandomAccessRange!(ReturnType!(G.incidentEdges)) ||
+                                    !isRandomAccessRange!(ReturnType!(G.neighbours))))
+    {
+        enum bool isGraph = false;
+    }
     else
     {
         enum bool isGraph = true;
