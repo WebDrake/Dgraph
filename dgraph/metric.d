@@ -188,7 +188,7 @@ auto betweenness(Graph, T = double)(ref Graph g, bool[] ignore = null)
  * algorithm for betweenness centrality.  No claims are made for its
  * performance or even correctness.
  */
-size_t largestClusterSize(Graph)(ref Graph g, bool[] ignore)
+size_t largestClusterSize(Graph)(ref Graph g, bool[] ignore = null)
     if (isGraph!Graph)
 {
     long[] cluster = new long[g.vertexCount];
@@ -198,7 +198,11 @@ size_t largestClusterSize(Graph)(ref Graph g, bool[] ignore)
 
     foreach (immutable s; 0 .. g.vertexCount)
     {
-        if (!ignore[s] && cluster[s] < 0)
+        if (ignore && ignore[s])
+        {
+            continue;
+        }
+        else if (cluster[s] < 0)
         {
             assert(q.empty);
             cluster[s] = 0;
@@ -221,7 +225,11 @@ size_t largestClusterSize(Graph)(ref Graph g, bool[] ignore)
 
                 foreach (immutable w; allNeighbours)
                 {
-                    if (!ignore[w] && cluster[w] < 0)
+                    if (ignore && ignore[w])
+                    {
+                        continue;
+                    }
+                    else if (cluster[w] < 0)
                     {
                        q.push(w);
                        cluster[w] = clusterSize;
@@ -257,8 +265,9 @@ unittest
         g.addEdge(0, 1);
         g.addEdge(1, 2);
         g.addEdge(3, 4);
-        size_t largest = largestClusterSize(g, ignore);
+        size_t largest = largestClusterSize(g);
         writeln("largest cluster size = ", largest);
+        assert(largestClusterSize(g) == largestClusterSize(g, ignore));
 
         ignore[0 .. 2] = true;
         largest = largestClusterSize(g, ignore);
@@ -285,7 +294,8 @@ unittest
                 g.addEdge(i, j);
             }
         }
-        writeln("largest cluster size = ", largestClusterSize(g, ignore));
+        writeln("largest cluster size = ", largestClusterSize(g));
+        assert(largestClusterSize(g) == largestClusterSize(g, ignore));
         foreach (immutable i; 0 .. 100)
         {
             ignore[i] = true;
@@ -310,7 +320,8 @@ unittest
         {
             g.addEdge(i, i + 1);
         }
-        writeln("largest cluster size = ", largestClusterSize(g, ignore));
+        writeln("largest cluster size = ", largestClusterSize(g));
+        assert(largestClusterSize(g) == largestClusterSize(g, ignore));
         ignore[n / 4] = true;
         writeln("largest cluster size = ", largestClusterSize(g, ignore));
     }
