@@ -21,7 +21,7 @@
 
 module dgraph.test.tests;
 
-import std.algorithm, std.exception;
+import std.algorithm, std.conv, std.exception;
 
 import dgraph.graph;
 
@@ -127,7 +127,7 @@ void testAddEdge(Graph, bool allAtOnce = false, ushort verbose = 0, T : size_t)
 }
 
 /// Tests that the edgeID function returns correct values for all edges in the graph.
-void testEdgeID(Graph, bool directed)(ref Graph g)
+void testEdgeID(Graph)(ref Graph g)
     if(isGraph!Graph)
 {
     foreach (immutable i; 0 .. g.edgeCount)
@@ -135,5 +135,36 @@ void testEdgeID(Graph, bool directed)(ref Graph g)
         auto edge = g.edge[i];
         size_t id = g.edgeID(edge[0], edge[1]);
         enforce(i == id, text("Edge ID failure for edge ", i, ": edgeID(", edge[0], ", ", edge[1], ") returns ", id));
+        static if (!Graph.directed)
+        {
+            id = g.edgeID(edge[1], edge[0]);
+            enforce(i == id, text("Edge ID failure for edge ", i, ": edgeID(", edge[1], ", ", edge[0], ") returns ", id));
+        }
+    }
+}
+
+unittest
+{
+    import std.typetuple;
+    foreach(Graph; TypeTuple!(IndexedEdgeList, CachedEdgeList))
+    {
+        foreach(directed; TypeTuple!(false, true))
+        {
+            {
+                import dgraph.test.samplegraph50;
+                auto g = new Graph!directed;
+                g.vertexCount = 50;
+                g.addEdge(sampleGraph50);
+                testEdgeID(g);
+            }
+
+            {
+                import dgraph.test.samplegraph10k;
+                auto g = new Graph!directed;
+                g.vertexCount = 10_000;
+                g.addEdge(sampleGraph10k);
+                testEdgeID(g);
+            }
+        }
     }
 }
