@@ -26,8 +26,9 @@ import std.algorithm, std.exception;
 import dgraph.graph;
 
 /**
-  Tests adding edges one at a time.  Can be used e.g. for benchmarking or for
-  checking that network properties are reliably imported.
+ * Tests adding edges to a graph, either one at a time or all in one go.  Can
+ * be used e.g. for benchmarking or for checking that network properties are
+ * reliably imported.
  */
 void testAddEdge(Graph, bool allAtOnce = false, ushort verbose = 0, T : size_t)
                 (immutable size_t v, T[] edgeList)

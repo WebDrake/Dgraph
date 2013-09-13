@@ -1,5 +1,7 @@
 // Written in the D programming language.
 
+module dgraph.test.samplegraph50;
+
 /**
   Sample graph for use in testing.  The array represents an
   undirected regular graph with 50 vertices, each having 4
@@ -8,9 +10,6 @@
   Each successive pair of array entries represents a single
   undirected link.
 */
-
-module dgraph.test.samplegraph50;
-
 immutable size_t sampleGraph50[200] =
   [ 0, 24,
     0, 25,

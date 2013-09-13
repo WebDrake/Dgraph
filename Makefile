@@ -5,6 +5,9 @@ PROGS = graphtest betweenness50 betweenness10k
 
 all: $(PROGS)
 
+html: $(LIBSRC)
+	$(DC) -o- -D -Ddhtml $(LIBSRC)
+
 %: %.d $(LIBSRC)
 	$(DC) $(DFLAGS) -of$* $*.d $(LIBSRC)
 

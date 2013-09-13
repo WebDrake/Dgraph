@@ -27,6 +27,7 @@ module dgraph.graph;
 
 import std.algorithm, std.array, std.conv, std.range, std.traits;
 
+/// Test if G is a Dgraph graph type.
 template isGraph(G)
 {
     static if (!__traits(hasMember, G, "directed") ||
@@ -82,6 +83,7 @@ template isGraph(G)
     }
 }
 
+/// Test if G is a directed graph.
 template isDirectedGraph(G)
 {
     static if (isGraph!G)
@@ -94,6 +96,7 @@ template isDirectedGraph(G)
     }
 }
 
+/// Test if G is an undirected graph.
 template isUndirectedGraph(G)
 {
     static if (isGraph!G)
@@ -123,6 +126,12 @@ unittest
     assert(isUndirectedGraph!(CachedEdgeList!false));
 }
 
+/**
+ * Graph data type based on igraph's igraph_t.  The basic data structure is a
+ * pair of arrays whose entries consist of the start and end vertices of the
+ * edges in the graph.  These are supplemented by sorted indices and cumulative
+ * sums that enable fast calculation of graph properties from the stored data.
+ */
 final class IndexedEdgeList(bool dir)
 {
   private:
@@ -455,6 +464,11 @@ final class IndexedEdgeList(bool dir)
     }
 }
 
+/**
+ * An extension of IndexedEdgeList that caches the results of calculations of
+ * various graph properties so as to provide speedier performance.  This is the
+ * recommended data type to use with Dgraph.
+ */
 final class CachedEdgeList(bool dir)
 {
   private:

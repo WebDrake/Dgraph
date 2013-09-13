@@ -4,6 +4,10 @@ import std.algorithm, std.conv, std.range, std.traits;
 
 import dgraph.graph;
 
+/**
+ * Simple queue implementation for internal use.  This will probably be removed
+ * once Phobos has an effective queue container.
+ */
 struct VertexQueue
 {
     private size_t _length, maxLength, head, tail;
@@ -70,6 +74,13 @@ unittest
     assert(q.empty);
 }
 
+/**
+ * Calculate betweenness centrality of vertices in a graph, using the algorithm
+ * developed by Ulrik Brandes (2001) J. Math. Sociol. 25(2): 163-177.
+ *
+ * The optional function parameter ignore allows the user to indicate
+ * individual vertices to ignore in the calculation.
+ */
 auto betweenness(Graph, T = double)(ref Graph g, bool[] ignore = null)
     if (isGraph!Graph && isFloatingPoint!T)
 {
@@ -167,6 +178,16 @@ auto betweenness(Graph, T = double)(ref Graph g, bool[] ignore = null)
     return centrality;
 }
 
+/**
+ * Calculate the size of the largest connected cluster in the graph.
+ *
+ * The function parameter ignore allows the user to specify individual
+ * vertices to ignore for the purposes of the calculation.
+ *
+ * This algorithm is a rather ad-hoc construction inspired by Brandes'
+ * algorithm for betweenness centrality.  No claims are made for its
+ * performance or even correctness.
+ */
 size_t largestClusterSize(Graph)(ref Graph g, bool[] ignore)
     if (isGraph!Graph)
 {
