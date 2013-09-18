@@ -7,6 +7,11 @@ import dgraph.graph;
 /**
  * Simple queue implementation for internal use.  This will probably be removed
  * once Phobos has an effective queue container.
+ *
+ * This is derived from Bearophile's $(LINK2 http://rosettacode.org/wiki/Queue/Usage#Faster_Version,
+ * RosettaCode example of a circular queue), which he has kindly agreed to allow
+ * to be $(LINK2 http://forum.dlang.org/post/mvmzvkjpbhazezlsydim@forum.dlang.org,
+ * used under the terms of the Boost licence).
  */
 struct VertexQueue
 {
