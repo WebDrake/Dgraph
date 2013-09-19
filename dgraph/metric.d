@@ -86,10 +86,16 @@ unittest
  * The optional function parameter ignore allows the user to indicate
  * individual vertices to ignore in the calculation.
  */
-auto betweenness(T = double, Graph)(ref Graph g, bool[] ignore = null)
+auto ref betweenness(T = double, Graph)(ref Graph g, bool[] ignore = null)
     if (isFloatingPoint!T && isGraph!Graph)
 {
     T[] centrality = new T[g.vertexCount];
+    return betweenness!(T, Graph)(g, centrality, ignore);
+}
+
+auto ref betweenness(T = double, Graph)(ref Graph g, ref T[] centrality, bool[] ignore = null)
+{
+    centrality.length = g.vertexCount;
     centrality[] = to!T(0);
     size_t[] stack = new size_t[g.vertexCount];
     T[] sigma = new T[g.vertexCount];
