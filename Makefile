@@ -8,8 +8,8 @@ all: $(PROGS)
 html: $(LIBSRC)
 	$(DC) -o- -D -Ddhtml $(LIBSRC)
 
-%: source/%.d $(LIBSRC)
-	$(DC) $(DFLAGS) -of$* source/$*.d $(LIBSRC)
+%: util/*/source/%.d $(LIBSRC)
+	$(DC) $(DFLAGS) -of$* util/$*/source/$*.d $(LIBSRC)
 
 .PHONY: clean
 

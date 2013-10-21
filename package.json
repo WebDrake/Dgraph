@@ -7,5 +7,4 @@
 	"homepage": "https://github.com/WebDrake/Dgraph",
 	"license": "GPL-3.0 or later",
 	"targetType": "sourceLibrary",
-	"excludedSourceFiles": ["source/graphtest.d", "source/betweenness50.d", "source/betweenness10k.d"]
 }
