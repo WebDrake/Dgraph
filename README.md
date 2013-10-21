@@ -37,6 +37,29 @@ Finally, the library provides a small selection of benchmarks for graph
 construction and calculation of graph metrics.
 
 
+Building
+--------
+
+Dgraph is a source library and so does not need to be compiled in order to use:
+just import the modules into your own D program.  DUB packaging is supported
+and can be used to build programs that have Dgraph as a dependency
+(see http://code.dlang.org/ for more information).
+
+Several test utilities are provided that offer benchmarking of key features.
+These can be built either using make (`make all` or `make [name]`) or with
+dub (`dub build dgraph:[name]`).  The currently available utilities are as
+follows:
+
+   * __dgraph_graphtest__ benchmarks the creation of graphs from scratch, using
+     two sample graphs with 50 and 10,000 nodes respectively.
+
+   * __dgraph_betweenness50__ benchmarks betweenness centrality calculation on
+     the 50-node sample graph.
+
+   * __dgraph_betweenness10k__ benchmarks betweenness centrality calculation on
+     the 10,000-node sample graph.
+
+
 Contributing
 ------------
 
