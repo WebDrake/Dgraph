@@ -1,20 +1,20 @@
 DC = gdmd
 DFLAGS = -O -inline
 LIBSRC = source/dgraph/*.d source/dgraph/test/*.d
-PROGS = graphtest betweenness50 betweenness10k
+PROGS = dgraph_graphtest dgraph_betweenness50 dgraph_betweenness10k
 
 all: $(PROGS)
 
-html: $(LIBSRC)
-	$(DC) -o- -D -Ddhtml $(LIBSRC)
+docs: $(LIBSRC)
+	$(DC) -o- -D -Dddocs $(LIBSRC)
 
-%: util/*/source/%.d $(LIBSRC)
-	$(DC) $(DFLAGS) -of$* util/$*/source/$*.d $(LIBSRC)
+dgraph_%: util/*/source/%.d $(LIBSRC)
+	$(DC) $(DFLAGS) -ofdgraph_$* util/$*/source/$*.d $(LIBSRC)
 
 .PHONY: clean
 
 clean:
 	rm -f $(PROGS) *.o *.di
 
-doc-clean:
-	rm -rf html
+docs-clean:
+	rm -rf docs
