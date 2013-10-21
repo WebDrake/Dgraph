@@ -7,4 +7,28 @@
 	"homepage": "https://github.com/WebDrake/Dgraph",
 	"license": "GPL-3.0 or later",
 	"targetType": "sourceLibrary",
+
+	"subPackages": [
+		{
+			"name": "graphtest",
+			"targetType": "executable",
+			"sourcePaths": ["util/graphtest/source/"],
+			"dependencies": { "dgraph": "~master" }
+		},
+
+		{
+			"name": "betweenness50",
+			"targetType": "executable",
+			"sourcePaths": ["util/betweenness50/source/"],
+			"dependencies": { "dgraph": "~master" }
+		},
+
+		{
+			"name": "betweenness10k",
+			"targetType": "executable",
+			"sourcePaths": ["util/betweenness10k/source/"],
+			"dependencies": { "dgraph": "~master" }
+		}
+
+	]
 }
