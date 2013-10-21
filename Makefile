@@ -1,6 +1,6 @@
 DC = gdmd
 DFLAGS = -O -inline
-LIBSRC = dgraph/*.d dgraph/test/*.d
+LIBSRC = source/dgraph/*.d source/dgraph/test/*.d
 PROGS = graphtest betweenness50 betweenness10k
 
 all: $(PROGS)
@@ -8,8 +8,8 @@ all: $(PROGS)
 html: $(LIBSRC)
 	$(DC) -o- -D -Ddhtml $(LIBSRC)
 
-%: %.d $(LIBSRC)
-	$(DC) $(DFLAGS) -of$* $*.d $(LIBSRC)
+%: source/%.d $(LIBSRC)
+	$(DC) $(DFLAGS) -of$* source/$*.d $(LIBSRC)
 
 .PHONY: clean
 
