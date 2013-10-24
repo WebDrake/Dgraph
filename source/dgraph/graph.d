@@ -196,6 +196,12 @@ final class IndexedEdgeList(bool dir)
     }
 
   public:
+    /**
+     * Add new edges to the graph.  These may be provided either singly, by
+     * passing an individual (head, tail) pair, or en masse by passing an array
+     * whose entries are [head1, tail1, head2, tail2, ...].  Duplicate edges
+     * are permitted.
+     */
     void addEdge()(size_t head, size_t tail)
     {
         assert(head < this.vertexCount, text("Edge head ", head, " is greater than vertex count ", this.vertexCount));
@@ -214,6 +220,7 @@ final class IndexedEdgeList(bool dir)
         ++_sumTail[tail + 1 .. $];
     }
 
+    /// ditto
     void addEdge(T : size_t)(T[] edgeList)
     {
         assert(edgeList.length % 2 == 0);
@@ -244,12 +251,19 @@ final class IndexedEdgeList(bool dir)
 
     static if (directed)
     {
+        /**
+         * Provide respectively the in- and out-degrees of a vertex v, i.e.
+         * the number of vertices to which v is connected by respectively
+         * incoming or outgoing links.  If the graph is undirected, these
+         * values are identical and the general degree method is also defined.
+         */
         size_t degreeIn(in size_t v) @safe const nothrow pure
         {
             assert(v + 1 < _sumTail.length);
             return _sumTail[v + 1] - _sumTail[v];
         }
 
+        ///ditto
         size_t degreeOut(in size_t v) @safe const nothrow pure
         {
             assert(v + 1 < _sumHead.length);
@@ -258,6 +272,7 @@ final class IndexedEdgeList(bool dir)
     }
     else
     {
+        /// Provides the degree of a vertex v in an undirected graph.
         size_t degree(in size_t v) @safe const nothrow pure
         {
             assert(v + 1 < _sumHead.length);
@@ -270,19 +285,32 @@ final class IndexedEdgeList(bool dir)
         alias degreeOut = degree;
     }
 
+    /**
+     * Static boolean value indicating whether or not the graph is directed.
+     * This is available for compile-time as well as runtime checks.
+     */
     alias directed = dir;
 
+    /**
+     * Returns a list of all edges in the graph in the form of a list of
+     * (head, tail) vertex pairs.
+     */
     auto edge() @property @safe const nothrow pure
     {
         return zip(_head, _tail);
     }
 
+    /// Total number of edges in the graph.
     size_t edgeCount() @property @safe const nothrow pure
     {
         assert(_head.length == _tail.length);
         return _head.length;
     }
 
+    /**
+     * Returns the edge index for a given (head, tail) vertex pair.  If
+     * (head, tail) is not an edge, will throw an exception.
+     */
     size_t edgeID(size_t head, size_t tail) const
     {
         assert(head < vertexCount);
@@ -331,11 +359,17 @@ final class IndexedEdgeList(bool dir)
 
     static if (directed)
     {
+        /**
+         * Returns the IDs of edges respectively incoming to or outgoing from
+         * the specified vertex v.  If the graph is undirected the two will be
+         * identical and the general method incidentEdges is also defined.
+         */
         auto incidentEdgesIn(in size_t v) const
         {
             return iota(_sumTail[v], _sumTail[v + 1]).map!(a => _indexTail[a]);
         }
 
+        /// ditto
         auto incidentEdgesOut(in size_t v) const
         {
             return iota(_sumHead[v], _sumHead[v + 1]).map!(a => _indexHead[a]);
@@ -343,6 +377,7 @@ final class IndexedEdgeList(bool dir)
     }
     else
     {
+        /// ditto
         auto incidentEdges(in size_t v) const
         {
             return chain(iota(_sumTail[v], _sumTail[v + 1]).map!(a => _indexTail[a]),
@@ -353,6 +388,9 @@ final class IndexedEdgeList(bool dir)
         alias incidentEdgesOut = incidentEdges;
     }
 
+    /**
+     * Checks if a given (head, tail) vertex pair forms an edge in the graph.
+     */
     bool isEdge(size_t head, size_t tail) const
     {
         assert(head < vertexCount);
@@ -404,11 +442,17 @@ final class IndexedEdgeList(bool dir)
 
     static if (directed)
     {
+        /**
+         * Returns the IDs of vertices connected to v via incoming or outgoing
+         * links.  If the graph is undirected the two will be identical and the
+         * general neighbours method is also defined.
+         */
         auto neighboursIn(in size_t v) const
         {
             return iota(_sumTail[v], _sumTail[v + 1]).map!(a => _head[_indexTail[a]]);
         }
 
+        /// ditto
         auto neighboursOut(in size_t v) const
         {
             return iota(_sumHead[v], _sumHead[v + 1]).map!(a => _tail[_indexHead[a]]);
@@ -416,6 +460,7 @@ final class IndexedEdgeList(bool dir)
     }
     else
     {
+        /// ditto
         auto neighbours(in size_t v) const
         {
             return chain(iota(_sumTail[v], _sumTail[v + 1]).map!(a => _head[_indexTail[a]]),
@@ -430,12 +475,17 @@ final class IndexedEdgeList(bool dir)
     alias neighborsIn = neighboursIn;
     alias neighborsOut = neighboursOut;
 
+    /**
+     * Get or set the total number of vertices in the graph.  Will throw an
+     * exception if resetting the number of vertices would delete edges.
+     */
     size_t vertexCount() @property @safe const nothrow pure
     {
         assert(_sumHead.length == _sumTail.length);
         return _sumHead.length - 1;
     }
 
+    /// ditto
     size_t vertexCount(in size_t n) @property @safe pure
     {
         immutable size_t l = _sumHead.length;
@@ -466,8 +516,9 @@ final class IndexedEdgeList(bool dir)
 
 /**
  * An extension of IndexedEdgeList that caches the results of calculations of
- * various graph properties so as to provide speedier performance.  This is the
- * recommended data type to use with Dgraph.
+ * various graph properties so as to provide speedier performance.  Provides
+ * the same set of public methods.  This is the recommended data type to use
+ * with Dgraph.
  */
 final class CachedEdgeList(bool dir)
 {
