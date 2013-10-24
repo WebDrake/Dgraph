@@ -25,7 +25,7 @@
 
 module dgraph.graph;
 
-import std.algorithm, std.array, std.conv, std.range, std.traits;
+import std.algorithm, std.array, std.exception, std.range, std.traits;
 import std.string : format;
 
 /// Test if G is a Dgraph graph type.
@@ -168,8 +168,8 @@ final class IndexedEdgeList(bool dir)
             _indexTail[i] = e;
         }
         assert(_indexHead.length == _indexTail.length);
-        assert(_indexHead.length == _head.length, text(_indexHead.length, " head indices but ", _head.length, " head values."));
-        assert(_indexTail.length == _tail.length, text(_indexTail.length, " tail indices but ", _tail.length, " tail values."));
+        assert(_indexHead.length == _head.length, format("%s head indices but %s head values.", _indexHead.length, _head.length));
+        assert(_indexTail.length == _tail.length, format("%s tail indices but %s tail values.", _indexTail.length, _tail.length));
     }
 
     void indexEdgesSort()
@@ -205,8 +205,8 @@ final class IndexedEdgeList(bool dir)
      */
     void addEdge()(size_t head, size_t tail)
     {
-        assert(head < this.vertexCount, text("Edge head ", head, " is greater than vertex count ", this.vertexCount));
-        assert(tail < this.vertexCount, text("Edge tail ", tail, " is greater than vertex count ", this.vertexCount));
+        enforce(head < vertexCount, format("Edge head %s is greater than largest vertex ID %s", head, vertexCount - 1));
+        enforce(tail < vertexCount, format("Edge tail %s is greater than largest vertex ID %s", tail, vertexCount - 1));
         static if (!directed)
         {
             if (tail < head)
@@ -224,7 +224,7 @@ final class IndexedEdgeList(bool dir)
     /// ditto
     void addEdge(T : size_t)(T[] edgeList)
     {
-        assert(edgeList.length % 2 == 0);
+        enforce(edgeList.length % 2 == 0);
         assert(_head.length == _tail.length);
         immutable size_t l = _head.length;
         _head.length += edgeList.length / 2;
@@ -233,8 +233,8 @@ final class IndexedEdgeList(bool dir)
         {
             size_t head = edgeList[2 * i];
             size_t tail = edgeList[2 * i + 1];
-            assert(head < this.vertexCount, text("Edge head ", head, " is greater than vertex count ", this.vertexCount));
-            assert(tail < this.vertexCount, text("Edge tail ", tail, " is greater than vertex count ", this.vertexCount));
+            enforce(head < vertexCount, format("Edge head %s is greater than largest vertex ID %s", head, vertexCount - 1));
+            enforce(tail < vertexCount, format("Edge tail %s is greater than vertex count %s", tail, vertexCount - 1));
             static if (!directed)
             {
                 if (tail < head)
@@ -258,15 +258,17 @@ final class IndexedEdgeList(bool dir)
          * incoming or outgoing links.  If the graph is undirected, these
          * values are identical and the general degree method is also defined.
          */
-        size_t degreeIn(in size_t v) @safe const nothrow pure
+        size_t degreeIn(in size_t v) @safe const pure
         {
+            enforce(isVertex(v));
             assert(v + 1 < _sumTail.length);
             return _sumTail[v + 1] - _sumTail[v];
         }
 
         ///ditto
-        size_t degreeOut(in size_t v) @safe const nothrow pure
+        size_t degreeOut(in size_t v) @safe const pure
         {
+            enforce(isVertex(v));
             assert(v + 1 < _sumHead.length);
             return _sumHead[v + 1] - _sumHead[v];
         }
@@ -274,8 +276,9 @@ final class IndexedEdgeList(bool dir)
     else
     {
         /// Provides the degree of a vertex v in an undirected graph.
-        size_t degree(in size_t v) @safe const nothrow pure
+        size_t degree(in size_t v) @safe const pure
         {
+            enforce(isVertex(v));
             assert(v + 1 < _sumHead.length);
             assert(_sumHead.length == _sumTail.length);
             return (_sumHead[v + 1] - _sumHead[v])
@@ -314,8 +317,16 @@ final class IndexedEdgeList(bool dir)
      */
     size_t edgeID(size_t head, size_t tail) const
     {
-        assert(head < vertexCount);
-        assert(tail < vertexCount);
+        if(!isVertex(head))
+        {
+            throw new Exception(format("No vertex with ID %s", head));
+        }
+
+        if(!isVertex(tail))
+        {
+            throw new Exception(format("No vertex with ID %s", tail));
+        }
+
         static if (!directed)
         {
             if (tail < head)
@@ -390,12 +401,14 @@ final class IndexedEdgeList(bool dir)
          */
         auto incidentEdgesIn(in size_t v) const
         {
+            enforce(isVertex(v));
             return iota(_sumTail[v], _sumTail[v + 1]).map!(a => _indexTail[a]);
         }
 
         /// ditto
         auto incidentEdgesOut(in size_t v) const
         {
+            enforce(isVertex(v));
             return iota(_sumHead[v], _sumHead[v + 1]).map!(a => _indexHead[a]);
         }
     }
@@ -404,6 +417,7 @@ final class IndexedEdgeList(bool dir)
         /// ditto
         auto incidentEdges(in size_t v) const
         {
+            enforce(isVertex(v));
             return chain(iota(_sumTail[v], _sumTail[v + 1]).map!(a => _indexTail[a]),
                          iota(_sumHead[v], _sumHead[v + 1]).map!(a => _indexHead[a]));
         }
@@ -417,8 +431,11 @@ final class IndexedEdgeList(bool dir)
      */
     bool isEdge(size_t head, size_t tail) const
     {
-        assert(head < vertexCount);
-        assert(tail < vertexCount);
+        if(!(isVertex(head) && isVertex(tail)))
+        {
+            return false;
+        }
+
         static if (!directed)
         {
             if (tail < head)
@@ -465,6 +482,24 @@ final class IndexedEdgeList(bool dir)
         }
     }
 
+    bool isVertex(T : size_t)(in T v) @safe const nothrow pure
+    {
+        static if (isSigned!T)
+        {
+            if (v < 0)
+            {
+                return false;
+            }
+        }
+
+        if (v < vertexCount)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
     static if (directed)
     {
         /**
@@ -474,12 +509,14 @@ final class IndexedEdgeList(bool dir)
          */
         auto neighboursIn(in size_t v) const
         {
+            enforce(isVertex(v));
             return iota(_sumTail[v], _sumTail[v + 1]).map!(a => _head[_indexTail[a]]);
         }
 
         /// ditto
         auto neighboursOut(in size_t v) const
         {
+            enforce(isVertex(v));
             return iota(_sumHead[v], _sumHead[v + 1]).map!(a => _tail[_indexHead[a]]);
         }
     }
@@ -488,6 +525,7 @@ final class IndexedEdgeList(bool dir)
         /// ditto
         auto neighbours(in size_t v) const
         {
+            enforce(isVertex(v));
             return chain(iota(_sumTail[v], _sumTail[v + 1]).map!(a => _head[_indexTail[a]]),
                          iota(_sumHead[v], _sumHead[v + 1]).map!(a => _tail[_indexHead[a]]));
         }
@@ -613,19 +651,19 @@ final class CachedEdgeList(bool dir)
 
     static if (directed)
     {
-        size_t degreeIn(in size_t v) @safe const nothrow pure
+        size_t degreeIn(in size_t v) @safe const pure
         {
             return _graph.degreeIn(v);
         }
 
-        size_t degreeOut(in size_t v) @safe const nothrow pure
+        size_t degreeOut(in size_t v) @safe const pure
         {
             return _graph.degreeOut(v);
         }
     }
     else
     {
-        size_t degree(in size_t v) @safe const nothrow pure
+        size_t degree(in size_t v) @safe const pure
         {
             return _graph.degree(v);
         }
@@ -849,7 +887,7 @@ final class CachedEdgeList(bool dir)
 
 unittest
 {
-    import std.exception, std.stdio, std.typetuple;
+    import std.stdio, std.typetuple;
     foreach (Graph; TypeTuple!(IndexedEdgeList, CachedEdgeList))
     {
         writeln;
@@ -904,7 +942,7 @@ unittest
                     (h == 6 && t == 9) || (h == 9 && t == 6) ||
                     (h == 3 && t == 2) || (h == 2 && t == 3))
                 {
-                    assert(g1.isEdge(h, t), text("isEdge failure for edge (", h, ", ", t, ")"));
+                    assert(g1.isEdge(h, t), format("isEdge failure for edge (%s, %s)", h, t));
                     auto i = g1.edgeID(h, t);
                     if (h == g1._head[i])
                     {
@@ -920,7 +958,7 @@ unittest
                 }
                 else
                 {
-                    assert(!g1.isEdge(h, t), text("isEdge false positive for edge (", h, ", ", t, ")"));
+                    assert(!g1.isEdge(h, t), format("isEdge false positive for edge (%s, %s)", h, t));
                     assertThrown(g1.edgeID(h, t));
                 }
             }
@@ -996,14 +1034,14 @@ unittest
                     (h == 6 && t == 9) ||
                     (h == 3 && t == 2))
                 {
-                    assert(g2.isEdge(h, t), text("isEdge failure for edge (", h, ", ", t, ")"));
+                    assert(g2.isEdge(h, t), format("isEdge failure for edge (%s, %s)", h, t));
                     auto i = g2.edgeID(h, t);
                     assert(h == g2._head[i]);
                     assert(t == g2._tail[i]);
                 }
                 else
                 {
-                    assert(!g2.isEdge(h, t), text("isEdge false positive for edge (", h, ", ", t, ")"));
+                    assert(!g2.isEdge(h, t), format("isEdge false positive for edge (%s, %s)", h, t));
                     assertThrown(g2.edgeID(h, t));
                 }
             }
