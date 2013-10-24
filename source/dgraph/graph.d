@@ -887,183 +887,229 @@ final class CachedEdgeList(bool dir)
 
 unittest
 {
-    import std.stdio, std.typetuple;
-    foreach (Graph; TypeTuple!(IndexedEdgeList, CachedEdgeList))
+    import std.typetuple;
+
+    foreach(Graph; TypeTuple!(IndexedEdgeList, CachedEdgeList))
     {
-        writeln;
-        auto g1 = new Graph!false;
-        g1.vertexCount = 10;
-        assert(g1.vertexCount == 10);
-        g1.addEdge(5, 8);
-        g1.addEdge(5, 4);
-        g1.addEdge(7, 4);
-        g1.addEdge(3, 4);
-        g1.addEdge(6, 9);
-        g1.addEdge(3, 2);
-        foreach (immutable head, immutable tail; g1.edge)
+        foreach(directed; TypeTuple!(true, false))
         {
-            writeln("\t", head, "\t", tail);
-        }
-        writeln(g1._indexHead);
-        writeln(g1._indexTail);
-        writeln(g1._sumHead);
-        writeln(g1._sumTail);
-        foreach (immutable v; 0 .. g1.vertexCount)
-        {
-            writeln("\td(", v, ") =\t", g1.degree(v), "\tn(", v, ") = ", g1.neighbours(v), "\ti(", v, ") = ", g1.incidentEdges(v));
-            foreach (immutable e, immutable n; zip(g1.incidentEdges(v), g1.neighbours(v)))
+            /* We begin by creating two graphs with the different
+             * addEdge methods and ensuring that they wind up with
+             * the same internal data.
+             */
+            auto g1 = new Graph!directed;
+            auto g2 = new Graph!directed;
+            g1.vertexCount = g2.vertexCount = 10;
+            assert(g1.vertexCount == 10);
+            assert(g2.vertexCount == 10);
+
+            g1.addEdge(5, 8);
+            g1.addEdge(5, 4);
+            g1.addEdge(7, 4);
+            g1.addEdge(3, 4);
+            g1.addEdge(6, 9);
+            g1.addEdge(3, 2);
+
+            g2.addEdge([5, 8, 5, 4, 7, 4, 3, 4, 6, 9, 3, 2]);
+
+            assert(g1.edgeCount == 6);
+            assert(g2.edgeCount == 6);
+
+            if (directed)
             {
-                if (g1.edge[e][0] == v)
+                assert(g1._head == [5, 5, 7, 3, 6, 3]);
+                assert(g2._head == [5, 5, 7, 3, 6, 3]);
+                assert(g1._tail == [8, 4, 4, 4, 9, 2]);
+                assert(g2._tail == [8, 4, 4, 4, 9, 2]);
+
+                assert(g1._indexHead == [5, 3, 1, 0, 4, 2]);
+                assert(g2._indexHead == [5, 3, 1, 0, 4, 2]);
+                assert(g1._indexTail == [5, 3, 1, 2, 0, 4]);
+                assert(g2._indexTail == [5, 3, 1, 2, 0, 4]);
+
+                assert(g1._sumHead == [0, 0, 0, 0, 2, 2, 4, 5, 6, 6, 6]);
+                assert(g2._sumHead == [0, 0, 0, 0, 2, 2, 4, 5, 6, 6, 6]);
+                assert(g1._sumTail == [0, 0, 0, 1, 1, 4, 4, 4, 4, 5, 6]);
+                assert(g2._sumTail == [0, 0, 0, 1, 1, 4, 4, 4, 4, 5, 6]);
+            }
+            else
+            {
+                assert(g1._head == [5, 4, 4, 3, 6, 2]);
+                assert(g2._head == [5, 4, 4, 3, 6, 2]);
+                assert(g1._tail == [8, 5, 7, 4, 9, 3]);
+                assert(g2._tail == [8, 5, 7, 4, 9, 3]);
+
+                assert(g1._indexHead == [5, 3, 1, 2, 0, 4]);
+                assert(g2._indexHead == [5, 3, 1, 2, 0, 4]);
+                assert(g1._indexTail == [5, 3, 1, 2, 0, 4]);
+                assert(g2._indexTail == [5, 3, 1, 2, 0, 4]);
+
+                assert(g1._sumHead == [0, 0, 0, 1, 2, 4, 5, 6, 6, 6, 6]);
+                assert(g2._sumHead == [0, 0, 0, 1, 2, 4, 5, 6, 6, 6, 6]);
+                assert(g1._sumTail == [0, 0, 0, 0, 1, 2, 3, 3, 4, 5, 6]);
+                assert(g2._sumTail == [0, 0, 0, 0, 1, 2, 3, 3, 4, 5, 6]);
+            }
+
+            foreach(immutable v; 0 .. g1.vertexCount)
+            {
+                assert(g1.degreeIn(v) == g2.degreeIn(v));
+                assert(g1.degreeOut(v) == g2.degreeOut(v));
+                static if (!directed)
                 {
-                    assert(g1.edge[e][1] == n);
+                    assert(g1.degree(v) == g2.degree(v));
+                }
+            }
+
+            /* If the above all passes, then we know that the internal data
+             * representation is correct and we can focus on how the graph
+             * transforms this into output.
+             *
+             * Let's start by checking that vertex IDs are recognized ...
+             */
+            foreach (immutable i; -10 .. 20)
+            {
+                if (0 <= i && i < g1.vertexCount)
+                {
+                    assert(g1.isVertex(i));
                 }
                 else
                 {
-                    assert(g1.edge[e][1] == v);
-                    assert(g1.edge[e][0] == n);
+                    assert(!g1.isVertex(i));
                 }
             }
-        }
-        static if (is(typeof(g1) == CachedEdgeList!false))
-        {
-            writeln(g1._neighboursCache);
-            writeln(g1._incidentEdgesCache);
-        }
-        assert(iota(g1._head.length).map!(a => g1._head[g1._indexHead[a]]).isSorted);
-        assert(iota(g1._tail.length).map!(a => g1._tail[g1._indexTail[a]]).isSorted);
-        foreach (immutable h; 0 .. 10)
-        {
-            foreach (immutable t; 0 .. 10)
+
+            /* Now check that edges are correctly recognized and that the
+             * edge ID representation works.
+             */
+            foreach (immutable h; -10 .. 20)
             {
-                if ((h == 5 && t == 8) || (h == 8 && t == 5) ||
-                    (h == 5 && t == 4) || (h == 4 && t == 5) ||
-                    (h == 7 && t == 4) || (h == 4 && t == 7) ||
-                    (h == 3 && t == 4) || (h == 4 && t == 3) ||
-                    (h == 6 && t == 9) || (h == 9 && t == 6) ||
-                    (h == 3 && t == 2) || (h == 2 && t == 3))
+                foreach (immutable t; -10 .. 20)
                 {
-                    assert(g1.isEdge(h, t), format("isEdge failure for edge (%s, %s)", h, t));
-                    auto i = g1.edgeID(h, t);
-                    if (h == g1._head[i])
+                    if (directed)
                     {
-                        assert(t == g1._tail[i]);
-                        assert(h <= t);
+                        if ((h == 5 && t == 8) ||
+                            (h == 5 && t == 4) ||
+                            (h == 7 && t == 4) ||
+                            (h == 3 && t == 4) ||
+                            (h == 6 && t == 9) ||
+                            (h == 3 && t == 2))
+                        {
+                            assert(g1.isEdge(h, t));
+                            auto i = g1.edgeID(h, t);
+                            assert(h == g1._head[i]);
+                            assert(t == g1._tail[i]);
+                        }
+                        else
+                        {
+                            assert(!g1.isEdge(h, t));
+                            assertThrown(g1.edgeID(h, t));
+                        }
                     }
                     else
                     {
-                        assert(h == g1._tail[i]);
-                        assert(t == g1._head[i]);
-                        assert(h > t);
+                        if ((h == 5 && t == 8) || (h == 8 && t == 5) ||
+                            (h == 5 && t == 4) || (h == 4 && t == 5) ||
+                            (h == 7 && t == 4) || (h == 4 && t == 7) ||
+                            (h == 3 && t == 4) || (h == 4 && t == 3) ||
+                            (h == 6 && t == 9) || (h == 9 && t == 6) ||
+                            (h == 3 && t == 2) || (h == 2 && t == 3))
+                        {
+                            assert(g1.isEdge(h, t));
+                            auto i = g1.edgeID(h, t);
+                            if (h <= t)
+                            {
+                                assert(h == g1._head[i]);
+                                assert(t == g1._tail[i]);
+                            }
+                            else
+                            {
+                                assert(h == g1._tail[i]);
+                                assert(t == g1._head[i]);
+                            }
+                        }
+                        else
+                        {
+                            assert(!g1.isEdge(h, t));
+                            assertThrown(g1.edgeID(h, t));
+                        }
                     }
                 }
-                else
-                {
-                    assert(!g1.isEdge(h, t), format("isEdge false positive for edge (%s, %s)", h, t));
-                    assertThrown(g1.edgeID(h, t));
-                }
-            }
-        }
-        foreach (immutable i; 0 .. g1.edgeCount)
-        {
-            size_t h = g1._head[i];
-            size_t t = g1._tail[i];
-            assert(i == g1.edgeID(h, t));
-            assert(i == g1.edgeID(t, h));
-        }
-        g1.vertexCount = 20;
-        g1.vertexCount = 10;
-        writeln("Recheck head/tail values for undirected network:");
-        foreach (immutable head, immutable tail; g1.edge)
-        {
-            writeln("\t", head, "\t", tail);
-        }
-        writeln(g1._indexHead);
-        writeln(g1._indexTail);
-        writeln(g1._sumHead);
-        writeln(g1._sumTail);
-        writeln("... last check done!");
-        writeln;
-
-        auto g2 = new Graph!true;
-        g2.vertexCount = 10;
-        assert(g2.vertexCount == 10);
-        g2.addEdge(5, 8);
-        g2.addEdge(5, 4);
-        g2.addEdge(7, 4);
-        g2.addEdge(3, 4);
-        g2.addEdge(6, 9);
-        g2.addEdge(3, 2);
-        foreach (immutable head, immutable tail; g2.edge)
-            writeln("\t", head, "\t", tail);
-        writeln(g2._indexHead);
-        writeln(g2._indexTail);
-        writeln(g2._sumHead);
-        writeln(g2._sumTail);
-        foreach (immutable v; 0 .. g2.vertexCount)
-        {
-            writeln("\td_out(", v, ") =\t", g2.degreeOut(v), "\tn_out(", v, ") = ", g2.neighboursOut(v), "\ti_out(", v, ") = ", g2.incidentEdgesOut(v),
-                    "\td_in(", v, ") =\t", g2.degreeIn(v), "\tn_in(", v, ") = ", g2.neighboursIn(v), "\ti_in(", v, ") = ", g2.incidentEdgesIn(v));
-
-            foreach (immutable e, immutable n; zip(g2.incidentEdgesIn(v), g2.neighboursIn(v)))
-            {
-                assert(g2.edge[e][0] == n);
-                assert(g2.edge[e][1] == v);
             }
 
-            foreach (immutable e, immutable n; zip(g2.incidentEdgesOut(v), g2.neighboursOut(v)))
+            // Another check on edge ID.
+            foreach(immutable e; 0 .. g1.edgeCount)
             {
-                assert(g2.edge[e][0] == v);
-                assert(g2.edge[e][1] == n);
-            }
-        }
-        static if (is(typeof(g2) == CachedEdgeList!true))
-        {
-            writeln(g2._neighboursCache);
-            writeln(g2._incidentEdgesCache);
-        }
-        assert(iota(g2._head.length).map!(a => g2._head[g2._indexHead[a]]).isSorted);
-        assert(iota(g2._tail.length).map!(a => g2._tail[g2._indexTail[a]]).isSorted);
-        foreach (immutable h; 0 .. 10)
-        {
-            foreach (immutable t; 0 .. 10)
-            {
-                if ((h == 5 && t == 8) ||
-                    (h == 5 && t == 4) ||
-                    (h == 7 && t == 4) ||
-                    (h == 3 && t == 4) ||
-                    (h == 6 && t == 9) ||
-                    (h == 3 && t == 2))
+                size_t h = g1._head[e];
+                size_t t = g1._tail[e];
+                assert(e == g1.edgeID(h, t));
+                if (!directed)
                 {
-                    assert(g2.isEdge(h, t), format("isEdge failure for edge (%s, %s)", h, t));
-                    auto i = g2.edgeID(h, t);
-                    assert(h == g2._head[i]);
-                    assert(t == g2._tail[i]);
-                }
-                else
-                {
-                    assert(!g2.isEdge(h, t), format("isEdge false positive for edge (%s, %s)", h, t));
-                    assertThrown(g2.edgeID(h, t));
+                    assert(e == g1.edgeID(t, h));
                 }
             }
+
+            // Let's check the edge and neighbour functions.
+            foreach(immutable v; 0 .. g1.vertexCount)
+            {
+                foreach(immutable e, immutable n; zip(g1.incidentEdgesOut(v), g1.neighboursOut(v)))
+                {
+                    if (directed || v <= n)
+                    {
+                        assert(g1.edge[e][0] == v);
+                        assert(g1.edge[e][1] == n);
+                    }
+                    else
+                    {
+                        assert(g1.edge[e][0] == n);
+                        assert(g1.edge[e][1] == v);
+                    }
+                }
+
+                foreach(immutable e, immutable n; zip(g1.incidentEdgesIn(v), g1.neighboursIn(v)))
+                {
+                    if (directed || v > n)
+                    {
+                        assert(g1.edge[e][0] == n);
+                        assert(g1.edge[e][1] == v);
+                    }
+                    else
+                    {
+                        assert(g1.edge[e][0] == v);
+                        assert(g1.edge[e][1] == n);
+                    }
+                }
+
+                static if (!directed)
+                {
+                    foreach(immutable e, immutable n; zip(g1.incidentEdges(v), g1.neighbours(v)))
+                    {
+                        if (v <= n)
+                        {
+                            assert(g1.edge[e][0] == v);
+                            assert(g1.edge[e][1] == n);
+                        }
+                        else
+                        {
+                            assert(g1.edge[e][0] == n);
+                            assert(g1.edge[e][1] == v);
+                        }
+                    }
+                }
+            }
+
+            // Check that altering the number of vertices works OK.
+            g1.vertexCount = 20;
+            assert(g1.vertexCount == 20);
+            assertThrown(g1.vertexCount(5));
+            g1.vertexCount = 10;
+
+            // Check that now we've re-resized it it's back to where it was.
+            assert(g1._head == g2._head);
+            assert(g1._tail == g2._tail);
+            assert(g1._indexHead == g2._indexHead);
+            assert(g1._indexTail == g2._indexTail);
+            assert(g1._sumHead == g2._sumHead);
+            assert(g1._sumTail == g2._sumTail);
         }
-        foreach (immutable i; 0 .. g2.edgeCount)
-        {
-            size_t h = g2._head[i];
-            size_t t = g2._tail[i];
-            assert(i == g2.edgeID(h, t));
-        }
-        g2.vertexCount = 20;
-        g2.vertexCount = 10;
-        writeln("Recheck head/tail values for directed network:");
-        foreach (immutable head, immutable tail; g2.edge)
-        {
-            writeln("\t", head, "\t", tail);
-        }
-        writeln(g2._indexHead);
-        writeln(g2._indexTail);
-        writeln(g2._sumHead);
-        writeln(g2._sumTail);
-        writeln("... last check done!");
-        writeln;
     }
 }
