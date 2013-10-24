@@ -26,6 +26,7 @@
 module dgraph.graph;
 
 import std.algorithm, std.array, std.conv, std.range, std.traits;
+import std.string : format;
 
 /// Test if G is a Dgraph graph type.
 template isGraph(G)
@@ -315,7 +316,6 @@ final class IndexedEdgeList(bool dir)
     {
         assert(head < vertexCount);
         assert(tail < vertexCount);
-        assert(isEdge(head, tail));
         static if (!directed)
         {
             if (tail < head)
@@ -326,8 +326,32 @@ final class IndexedEdgeList(bool dir)
 
         size_t headDeg = _sumHead[head + 1] - _sumHead[head];
         size_t tailDeg = _sumTail[tail + 1] - _sumTail[tail];
-        assert(headDeg > 0);
-        assert(tailDeg > 0);
+
+        if (headDeg == 0)
+        {
+            static if (directed)
+            {
+                assert(degreeOut(head) == 0);
+                throw new Exception(format("Vertex %s has no outgoing neighbours.", head));
+            }
+            else
+            {
+                throw new Exception(format("(%s, %s) is not an edge", head, tail));
+            }
+        }
+
+        if (tailDeg == 0)
+        {
+            static if (directed)
+            {
+                assert(degreeIn(tail) == 0);
+                throw new Exception(format("Vertex %s has no incoming neighbours.", tail));
+            }
+            else
+            {
+                throw new Exception(format("(%s, %s) is not an edge", head, tail));
+            }
+        }
 
         if (headDeg < tailDeg)
         {
@@ -340,7 +364,7 @@ final class IndexedEdgeList(bool dir)
                     return i;
                 }
             }
-            assert(false);
+            throw new Exception(format("(%s, %s) is not an edge.", head, tail));
         }
         else
         {
@@ -353,7 +377,7 @@ final class IndexedEdgeList(bool dir)
                     return i;
                 }
             }
-            assert(false);
+            throw new Exception(format("(%s, %s) is not an edge.", head, tail));
         }
     }
 
@@ -414,7 +438,8 @@ final class IndexedEdgeList(bool dir)
         {
             return false;
         }
-        else if (headDeg < tailDeg)
+
+        if (headDeg < tailDeg)
         {
             // search among the tails of head
             foreach (immutable t; iota(_sumHead[head], _sumHead[head + 1]).map!(a => _tail[_indexHead[a]]))
@@ -824,7 +849,7 @@ final class CachedEdgeList(bool dir)
 
 unittest
 {
-    import std.stdio, std.typetuple;
+    import std.exception, std.stdio, std.typetuple;
     foreach (Graph; TypeTuple!(IndexedEdgeList, CachedEdgeList))
     {
         writeln;
@@ -880,10 +905,23 @@ unittest
                     (h == 3 && t == 2) || (h == 2 && t == 3))
                 {
                     assert(g1.isEdge(h, t), text("isEdge failure for edge (", h, ", ", t, ")"));
+                    auto i = g1.edgeID(h, t);
+                    if (h == g1._head[i])
+                    {
+                        assert(t == g1._tail[i]);
+                        assert(h <= t);
+                    }
+                    else
+                    {
+                        assert(h == g1._tail[i]);
+                        assert(t == g1._head[i]);
+                        assert(h > t);
+                    }
                 }
                 else
                 {
                     assert(!g1.isEdge(h, t), text("isEdge false positive for edge (", h, ", ", t, ")"));
+                    assertThrown(g1.edgeID(h, t));
                 }
             }
         }
@@ -959,10 +997,14 @@ unittest
                     (h == 3 && t == 2))
                 {
                     assert(g2.isEdge(h, t), text("isEdge failure for edge (", h, ", ", t, ")"));
+                    auto i = g2.edgeID(h, t);
+                    assert(h == g2._head[i]);
+                    assert(t == g2._tail[i]);
                 }
                 else
                 {
                     assert(!g2.isEdge(h, t), text("isEdge false positive for edge (", h, ", ", t, ")"));
+                    assertThrown(g2.edgeID(h, t));
                 }
             }
         }
