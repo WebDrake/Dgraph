@@ -196,7 +196,81 @@ final class IndexedEdgeList(bool dir)
     }
 
   public:
-    enum bool directed = dir;
+    void addEdge()(size_t head, size_t tail)
+    {
+        assert(head < this.vertexCount, text("Edge head ", head, " is greater than vertex count ", this.vertexCount));
+        assert(tail < this.vertexCount, text("Edge tail ", tail, " is greater than vertex count ", this.vertexCount));
+        static if (!directed)
+        {
+            if (tail < head)
+            {
+                swap(head, tail);
+            }
+        }
+        _head ~= head;
+        _tail ~= tail;
+        indexEdgesInsertion();
+        ++_sumHead[head + 1 .. $];
+        ++_sumTail[tail + 1 .. $];
+    }
+
+    void addEdge(T : size_t)(T[] edgeList)
+    {
+        assert(edgeList.length % 2 == 0);
+        assert(_head.length == _tail.length);
+        immutable size_t l = _head.length;
+        _head.length += edgeList.length / 2;
+        _tail.length += edgeList.length / 2;
+        foreach (immutable i; 0 .. edgeList.length / 2)
+        {
+            size_t head = edgeList[2 * i];
+            size_t tail = edgeList[2 * i + 1];
+            assert(head < this.vertexCount, text("Edge head ", head, " is greater than vertex count ", this.vertexCount));
+            assert(tail < this.vertexCount, text("Edge tail ", tail, " is greater than vertex count ", this.vertexCount));
+            static if (!directed)
+            {
+                if (tail < head)
+                {
+                    swap(head, tail);
+                }
+            }
+            _head[l + i] = head;
+            _tail[l + i] = tail;
+        }
+        indexEdgesSort();
+        sumEdges(_sumHead, _head, _indexHead);
+        sumEdges(_sumTail, _tail, _indexTail);
+    }
+
+    static if (directed)
+    {
+        size_t degreeIn(in size_t v) @safe const nothrow pure
+        {
+            assert(v + 1 < _sumTail.length);
+            return _sumTail[v + 1] - _sumTail[v];
+        }
+
+        size_t degreeOut(in size_t v) @safe const nothrow pure
+        {
+            assert(v + 1 < _sumHead.length);
+            return _sumHead[v + 1] - _sumHead[v];
+        }
+    }
+    else
+    {
+        size_t degree(in size_t v) @safe const nothrow pure
+        {
+            assert(v + 1 < _sumHead.length);
+            assert(_sumHead.length == _sumTail.length);
+            return (_sumHead[v + 1] - _sumHead[v])
+                 + (_sumTail[v + 1] - _sumTail[v]);
+        }
+
+        alias degreeIn = degree;
+        alias degreeOut = degree;
+    }
+
+    alias directed = dir;
 
     auto edge() @property @safe const nothrow pure
     {
@@ -209,37 +283,74 @@ final class IndexedEdgeList(bool dir)
         return _head.length;
     }
 
-    size_t vertexCount() @property @safe const nothrow pure
+    size_t edgeID(size_t head, size_t tail) const
     {
-        assert(_sumHead.length == _sumTail.length);
-        return _sumHead.length - 1;
-    }
-
-    size_t vertexCount(in size_t n) @property @safe pure
-    {
-        immutable size_t l = _sumHead.length;
-        if (n < (l - 1))
+        assert(head < vertexCount);
+        assert(tail < vertexCount);
+        assert(isEdge(head, tail));
+        static if (!directed)
         {
-            // Check that no edges are lost this way
-            if ((_sumHead[n] != _sumHead[$-1]) ||
-                (_sumTail[n] != _sumTail[$-1]))
+            if (tail < head)
             {
-                throw new Exception("Cannot set vertexCount value without deleting edges");
+                swap(head, tail);
             }
-            else
+        }
+
+        size_t headDeg = _sumHead[head + 1] - _sumHead[head];
+        size_t tailDeg = _sumTail[tail + 1] - _sumTail[tail];
+        assert(headDeg > 0);
+        assert(tailDeg > 0);
+
+        if (headDeg < tailDeg)
+        {
+            // search among the tails of head
+            foreach (immutable i; iota(_sumHead[head], _sumHead[head + 1]).map!(a => _indexHead[a]))
             {
-                _sumHead.length = n + 1;
-                _sumTail.length = n + 1;
+                if (_tail[i] == tail)
+                {
+                    assert(_head[i] == head);
+                    return i;
+                }
             }
+            assert(false);
         }
         else
         {
-            _sumHead.length = n + 1;
-            _sumTail.length = n + 1;
-            _sumHead[l .. $] = _sumHead[l - 1];
-            _sumTail[l .. $] = _sumTail[l - 1];
+            // search among the heads of tail
+            foreach (immutable i; iota(_sumTail[tail], _sumTail[tail + 1]).map!(a => _indexTail[a]))
+            {
+                if (_head[i] == head)
+                {
+                    assert(_tail[i] == tail);
+                    return i;
+                }
+            }
+            assert(false);
         }
-        return vertexCount;
+    }
+
+    static if (directed)
+    {
+        auto incidentEdgesIn(in size_t v) const
+        {
+            return iota(_sumTail[v], _sumTail[v + 1]).map!(a => _indexTail[a]);
+        }
+
+        auto incidentEdgesOut(in size_t v) const
+        {
+            return iota(_sumHead[v], _sumHead[v + 1]).map!(a => _indexHead[a]);
+        }
+    }
+    else
+    {
+        auto incidentEdges(in size_t v) const
+        {
+            return chain(iota(_sumTail[v], _sumTail[v + 1]).map!(a => _indexTail[a]),
+                         iota(_sumHead[v], _sumHead[v + 1]).map!(a => _indexHead[a]));
+        }
+
+        alias incidentEdgesIn  = incidentEdges;
+        alias incidentEdgesOut = incidentEdges;
     }
 
     bool isEdge(size_t head, size_t tail) const
@@ -291,104 +402,6 @@ final class IndexedEdgeList(bool dir)
         }
     }
 
-    size_t edgeID(size_t head, size_t tail) const
-    {
-        assert(head < vertexCount);
-        assert(tail < vertexCount);
-        assert(isEdge(head, tail));
-        static if (!directed)
-        {
-            if (tail < head)
-            {
-                swap(head, tail);
-            }
-        }
-
-        size_t headDeg = _sumHead[head + 1] - _sumHead[head];
-        size_t tailDeg = _sumTail[tail + 1] - _sumTail[tail];
-        assert(headDeg > 0);
-        assert(tailDeg > 0);
-
-        if (headDeg < tailDeg)
-        {
-            // search among the tails of head
-            foreach (immutable i; iota(_sumHead[head], _sumHead[head + 1]).map!(a => _indexHead[a]))
-            {
-                if (_tail[i] == tail)
-                {
-                    assert(_head[i] == head);
-                    return i;
-                }
-            }
-            assert(false);
-        }
-        else
-        {
-            // search among the heads of tail
-            foreach (immutable i; iota(_sumTail[tail], _sumTail[tail + 1]).map!(a => _indexTail[a]))
-            {
-                if (_head[i] == head)
-                {
-                    assert(_tail[i] == tail);
-                    return i;
-                }
-            }
-            assert(false);
-        }
-    }
-
-    static if (directed)
-    {
-        size_t degreeIn(in size_t v) @safe const nothrow pure
-        {
-            assert(v + 1 < _sumTail.length);
-            return _sumTail[v + 1] - _sumTail[v];
-        }
-
-        size_t degreeOut(in size_t v) @safe const nothrow pure
-        {
-            assert(v + 1 < _sumHead.length);
-            return _sumHead[v + 1] - _sumHead[v];
-        }
-    }
-    else
-    {
-        size_t degree(in size_t v) @safe const nothrow pure
-        {
-            assert(v + 1 < _sumHead.length);
-            assert(_sumHead.length == _sumTail.length);
-            return (_sumHead[v + 1] - _sumHead[v])
-                 + (_sumTail[v + 1] - _sumTail[v]);
-        }
-
-        alias degreeIn = degree;
-        alias degreeOut = degree;
-    }
-
-    static if (directed)
-    {
-        auto incidentEdgesIn(in size_t v) const
-        {
-            return iota(_sumTail[v], _sumTail[v + 1]).map!(a => _indexTail[a]);
-        }
-
-        auto incidentEdgesOut(in size_t v) const
-        {
-            return iota(_sumHead[v], _sumHead[v + 1]).map!(a => _indexHead[a]);
-        }
-    }
-    else
-    {
-        auto incidentEdges(in size_t v) const
-        {
-            return chain(iota(_sumTail[v], _sumTail[v + 1]).map!(a => _indexTail[a]),
-                         iota(_sumHead[v], _sumHead[v + 1]).map!(a => _indexHead[a]));
-        }
-
-        alias incidentEdgesIn  = incidentEdges;
-        alias incidentEdgesOut = incidentEdges;
-    }
-
     static if (directed)
     {
         auto neighboursIn(in size_t v) const
@@ -417,50 +430,37 @@ final class IndexedEdgeList(bool dir)
     alias neighborsIn = neighboursIn;
     alias neighborsOut = neighboursOut;
 
-    void addEdge()(size_t head, size_t tail)
+    size_t vertexCount() @property @safe const nothrow pure
     {
-        assert(head < this.vertexCount, text("Edge head ", head, " is greater than vertex count ", this.vertexCount));
-        assert(tail < this.vertexCount, text("Edge tail ", tail, " is greater than vertex count ", this.vertexCount));
-        static if (!directed)
-        {
-            if (tail < head)
-            {
-                swap(head, tail);
-            }
-        }
-        _head ~= head;
-        _tail ~= tail;
-        indexEdgesInsertion();
-        ++_sumHead[head + 1 .. $];
-        ++_sumTail[tail + 1 .. $];
+        assert(_sumHead.length == _sumTail.length);
+        return _sumHead.length - 1;
     }
 
-    void addEdge(T : size_t)(T[] edgeList)
+    size_t vertexCount(in size_t n) @property @safe pure
     {
-        assert(edgeList.length % 2 == 0);
-        assert(_head.length == _tail.length);
-        immutable size_t l = _head.length;
-        _head.length += edgeList.length / 2;
-        _tail.length += edgeList.length / 2;
-        foreach (immutable i; 0 .. edgeList.length / 2)
+        immutable size_t l = _sumHead.length;
+        if (n < (l - 1))
         {
-            size_t head = edgeList[2 * i];
-            size_t tail = edgeList[2 * i + 1];
-            assert(head < this.vertexCount, text("Edge head ", head, " is greater than vertex count ", this.vertexCount));
-            assert(tail < this.vertexCount, text("Edge tail ", tail, " is greater than vertex count ", this.vertexCount));
-            static if (!directed)
+            // Check that no edges are lost this way
+            if ((_sumHead[n] != _sumHead[$-1]) ||
+                (_sumTail[n] != _sumTail[$-1]))
             {
-                if (tail < head)
-                {
-                    swap(head, tail);
-                }
+                throw new Exception("Cannot set vertexCount value without deleting edges");
             }
-            _head[l + i] = head;
-            _tail[l + i] = tail;
+            else
+            {
+                _sumHead.length = n + 1;
+                _sumTail.length = n + 1;
+            }
         }
-        indexEdgesSort();
-        sumEdges(_sumHead, _head, _indexHead);
-        sumEdges(_sumTail, _tail, _indexTail);
+        else
+        {
+            _sumHead.length = n + 1;
+            _sumTail.length = n + 1;
+            _sumHead[l .. $] = _sumHead[l - 1];
+            _sumTail[l .. $] = _sumTail[l - 1];
+        }
+        return vertexCount;
     }
 }
 
@@ -473,20 +473,20 @@ final class CachedEdgeList(bool dir)
 {
   private:
     IndexedEdgeList!dir _graph;
-    size_t[] _neighboursCache;
     size_t[] _incidentEdgesCache;
+    size_t[] _neighboursCache;
 
     static if (directed)
     {
-        size_t[][] _neighboursIn;
-        size_t[][] _neighboursOut;
         size_t[][] _incidentEdgesIn;
         size_t[][] _incidentEdgesOut;
+        size_t[][] _neighboursIn;
+        size_t[][] _neighboursOut;
     }
     else
     {
-        size_t[][] _neighbours;
         size_t[][] _incidentEdges;
+        size_t[][] _neighbours;
     }
 
   public:
@@ -497,78 +497,42 @@ final class CachedEdgeList(bool dir)
 
     alias _graph this;
 
-    alias dir directed;
-
-    auto edge() @property @safe const nothrow pure
+    void addEdge()(size_t head, size_t tail)
     {
-        return _graph.edge;
-    }
-
-    size_t edgeCount() @property @safe const nothrow pure
-    {
-        return _graph.edgeCount;
-    }
-
-    size_t vertexCount() @property @safe const nothrow pure
-    {
-        return _graph.vertexCount;
-    }
-
-    size_t vertexCount(in size_t n) @property @safe pure
-    {
+        _graph.addEdge(head, tail);
+        _neighboursCache.length = 2 * _head.length;
+        _incidentEdgesCache.length = 2 * _head.length;
         static if (directed)
         {
-            assert(_sumTail.length == _neighboursIn.length + 1);
-            assert(_sumHead.length == _neighboursOut.length + 1);
-            assert(_sumTail.length == _incidentEdgesIn.length + 1);
-            assert(_sumHead.length == _incidentEdgesOut.length + 1);
+            _neighboursIn[] = null;
+            _neighboursOut[] = null;
+            _incidentEdgesIn[] = null;
+            _incidentEdgesOut[] = null;
         }
         else
         {
-            assert(_sumHead.length == _neighbours.length + 1);
-            assert(_sumTail.length == _incidentEdges.length + 1);
+            _neighbours[] = null;
+            _incidentEdges[] = null;
         }
+    }
 
-        immutable size_t l = _sumHead.length;
-        _graph.vertexCount = n;
-
+    void addEdge(T : size_t)(T[] edgeList)
+    {
+        _graph.addEdge(edgeList);
+        _neighboursCache.length = 2 * _head.length;
+        _incidentEdgesCache.length = 2 * _head.length;
         static if (directed)
         {
-            _neighboursIn.length = n;
-            _neighboursOut.length = n;
-            _incidentEdgesIn.length = n;
-            _incidentEdgesOut.length = n;
-
-            if (n >= l)
-            {
-                _neighboursIn[l - 1 .. $] = null;
-                _neighboursOut[l - 1 .. $] = null;
-                _incidentEdgesIn[l - 1 .. $] = null;
-                _incidentEdgesOut[l - 1 .. $] = null;
-            }
+            _neighboursIn[] = null;
+            _neighboursOut[] = null;
+            _incidentEdgesIn[] = null;
+            _incidentEdgesOut[] = null;
         }
         else
         {
-            _neighbours.length = n;
-            _incidentEdges.length = n;
-
-            if (n >= l)
-            {
-                _neighbours[l - 1 .. $] = null;
-                _incidentEdges[l - 1 .. $] = null;
-            }
+            _neighbours[] = null;
+            _incidentEdges[] = null;
         }
-        return vertexCount;
-    }
-
-    bool isEdge(size_t head, size_t tail) const
-    {
-        return _graph.isEdge(head, tail);
-    }
-
-    size_t edgeID(size_t head, size_t tail) const
-    {
-        return _graph.edgeID(head, tail);
     }
 
     static if (directed)
@@ -592,6 +556,23 @@ final class CachedEdgeList(bool dir)
 
         alias degreeIn = degree;
         alias degreeOut = degree;
+    }
+
+    alias directed = dir;
+
+    auto edge() @property @safe const nothrow pure
+    {
+        return _graph.edge;
+    }
+
+    size_t edgeCount() @property @safe const nothrow pure
+    {
+        return _graph.edgeCount;
+    }
+
+    size_t edgeID(size_t head, size_t tail) const
+    {
+        return _graph.edgeID(head, tail);
     }
 
     static if (directed)
@@ -659,6 +640,11 @@ final class CachedEdgeList(bool dir)
 
         alias incidentEdgesIn  = incidentEdges;
         alias incidentEdgesOut = incidentEdges;
+    }
+
+    bool isEdge(size_t head, size_t tail) const
+    {
+        return _graph.isEdge(head, tail);
     }
 
     static if (directed)
@@ -732,42 +718,56 @@ final class CachedEdgeList(bool dir)
     alias neighborsIn = neighboursIn;
     alias neighborsOut = neighboursOut;
 
-    void addEdge()(size_t head, size_t tail)
+    size_t vertexCount() @property @safe const nothrow pure
     {
-        _graph.addEdge(head, tail);
-        _neighboursCache.length = 2 * _head.length;
-        _incidentEdgesCache.length = 2 * _head.length;
-        static if (directed)
-        {
-            _neighboursIn[] = null;
-            _neighboursOut[] = null;
-            _incidentEdgesIn[] = null;
-            _incidentEdgesOut[] = null;
-        }
-        else
-        {
-            _neighbours[] = null;
-            _incidentEdges[] = null;
-        }
+        return _graph.vertexCount;
     }
 
-    void addEdge(T : size_t)(T[] edgeList)
+    size_t vertexCount(in size_t n) @property @safe pure
     {
-        _graph.addEdge(edgeList);
-        _neighboursCache.length = 2 * _head.length;
-        _incidentEdgesCache.length = 2 * _head.length;
         static if (directed)
         {
-            _neighboursIn[] = null;
-            _neighboursOut[] = null;
-            _incidentEdgesIn[] = null;
-            _incidentEdgesOut[] = null;
+            assert(_sumTail.length == _neighboursIn.length + 1);
+            assert(_sumHead.length == _neighboursOut.length + 1);
+            assert(_sumTail.length == _incidentEdgesIn.length + 1);
+            assert(_sumHead.length == _incidentEdgesOut.length + 1);
         }
         else
         {
-            _neighbours[] = null;
-            _incidentEdges[] = null;
+            assert(_sumHead.length == _neighbours.length + 1);
+            assert(_sumTail.length == _incidentEdges.length + 1);
         }
+
+        immutable size_t l = _sumHead.length;
+        _graph.vertexCount = n;
+
+        static if (directed)
+        {
+            _neighboursIn.length = n;
+            _neighboursOut.length = n;
+            _incidentEdgesIn.length = n;
+            _incidentEdgesOut.length = n;
+
+            if (n >= l)
+            {
+                _neighboursIn[l - 1 .. $] = null;
+                _neighboursOut[l - 1 .. $] = null;
+                _incidentEdgesIn[l - 1 .. $] = null;
+                _incidentEdgesOut[l - 1 .. $] = null;
+            }
+        }
+        else
+        {
+            _neighbours.length = n;
+            _incidentEdges.length = n;
+
+            if (n >= l)
+            {
+                _neighbours[l - 1 .. $] = null;
+                _incidentEdges[l - 1 .. $] = null;
+            }
+        }
+        return vertexCount;
     }
 }
 
