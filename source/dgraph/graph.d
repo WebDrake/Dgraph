@@ -592,15 +592,15 @@ final class CachedEdgeList(bool dir)
 
     static if (directed)
     {
-        size_t[][] _incidentEdgesIn;
-        size_t[][] _incidentEdgesOut;
-        size_t[][] _neighboursIn;
-        size_t[][] _neighboursOut;
+        const(size_t)[][] _incidentEdgesIn;
+        const(size_t)[][] _incidentEdgesOut;
+        const(size_t)[][] _neighboursIn;
+        const(size_t)[][] _neighboursOut;
     }
     else
     {
-        size_t[][] _incidentEdges;
-        size_t[][] _neighbours;
+        const(size_t)[][] _incidentEdges;
+        const(size_t)[][] _neighbours;
     }
 
   public:
