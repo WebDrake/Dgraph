@@ -156,15 +156,19 @@ final class IndexedEdgeList(bool dir)
             upper = _indexHead[0 .. e].map!(a => _head[a]).assumeSorted.lowerBound(_head[e] + 1).length;
             lower = _indexHead[0 .. upper].map!(a => _head[a]).assumeSorted.lowerBound(_head[e]).length;
             i = lower + _indexHead[lower .. upper].map!(a => _tail[a]).assumeSorted.lowerBound(_tail[e]).length;
-            for(j = e; j > i; --j)
+            for (j = e; j > i; --j)
+            {
                 _indexHead[j] = _indexHead[j - 1];
+            }
             _indexHead[i] = e;
 
             upper = _indexTail[0 .. e].map!(a => _tail[a]).assumeSorted.lowerBound(_tail[e] + 1).length;
             lower = _indexTail[0 .. upper].map!(a => _tail[a]).assumeSorted.lowerBound(_tail[e]).length;
             i = lower + _indexTail[lower .. upper].map!(a => _head[a]).assumeSorted.lowerBound(_head[e]).length;
-            for(j = e; j > i; --j)
+            for (j = e; j > i; --j)
+            {
                 _indexTail[j] = _indexTail[j - 1];
+            }
             _indexTail[i] = e;
         }
         assert(_indexHead.length == _indexTail.length);
@@ -187,7 +191,7 @@ final class IndexedEdgeList(bool dir)
 
         size_t v = vertex[index[0]];
         sum[0 .. v + 1] = 0;
-        for(size_t i = 1; i < index.length; ++i)
+        for (size_t i = 1; i < index.length; ++i)
         {
             size_t n = vertex[index[i]] - vertex[index[sum[v]]];
             sum[v + 1 .. v + n + 1] = i;
@@ -317,12 +321,12 @@ final class IndexedEdgeList(bool dir)
      */
     size_t edgeID(size_t head, size_t tail) const
     {
-        if(!isVertex(head))
+        if (!isVertex(head))
         {
             throw new Exception(format("No vertex with ID %s", head));
         }
 
-        if(!isVertex(tail))
+        if (!isVertex(tail))
         {
             throw new Exception(format("No vertex with ID %s", tail));
         }
@@ -431,7 +435,7 @@ final class IndexedEdgeList(bool dir)
      */
     bool isEdge(size_t head, size_t tail) const
     {
-        if(!(isVertex(head) && isVertex(tail)))
+        if (!(isVertex(head) && isVertex(tail)))
         {
             return false;
         }
@@ -803,7 +807,7 @@ final class CachedEdgeList(bool dir)
     {
         auto neighbours(in size_t v) @safe nothrow pure
         {
-            if(_neighbours[v] is null)
+            if (_neighbours[v] is null)
             {
                 immutable size_t start = _sumTail[v] + _sumHead[v];
                 immutable size_t end = _sumTail[v + 1] + _sumHead[v + 1];
@@ -889,9 +893,9 @@ unittest
 {
     import std.typetuple;
 
-    foreach(Graph; TypeTuple!(IndexedEdgeList, CachedEdgeList))
+    foreach (Graph; TypeTuple!(IndexedEdgeList, CachedEdgeList))
     {
-        foreach(directed; TypeTuple!(true, false))
+        foreach (directed; TypeTuple!(true, false))
         {
             /* We begin by creating two graphs with the different
              * addEdge methods and ensuring that they wind up with
@@ -950,7 +954,7 @@ unittest
                 assert(g2._sumTail == [0, 0, 0, 0, 1, 2, 3, 3, 4, 5, 6]);
             }
 
-            foreach(immutable v; 0 .. g1.vertexCount)
+            foreach (immutable v; 0 .. g1.vertexCount)
             {
                 assert(g1.degreeIn(v) == g2.degreeIn(v));
                 assert(g1.degreeOut(v) == g2.degreeOut(v));
@@ -1037,7 +1041,7 @@ unittest
             }
 
             // Another check on edge ID.
-            foreach(immutable e; 0 .. g1.edgeCount)
+            foreach (immutable e; 0 .. g1.edgeCount)
             {
                 size_t h = g1._head[e];
                 size_t t = g1._tail[e];
@@ -1049,9 +1053,9 @@ unittest
             }
 
             // Let's check the edge and neighbour functions.
-            foreach(immutable v; 0 .. g1.vertexCount)
+            foreach (immutable v; 0 .. g1.vertexCount)
             {
-                foreach(immutable e, immutable n; zip(g1.incidentEdgesOut(v), g1.neighboursOut(v)))
+                foreach (immutable e, immutable n; zip(g1.incidentEdgesOut(v), g1.neighboursOut(v)))
                 {
                     if (directed || v <= n)
                     {
@@ -1065,7 +1069,7 @@ unittest
                     }
                 }
 
-                foreach(immutable e, immutable n; zip(g1.incidentEdgesIn(v), g1.neighboursIn(v)))
+                foreach (immutable e, immutable n; zip(g1.incidentEdgesIn(v), g1.neighboursIn(v)))
                 {
                     if (directed || v > n)
                     {
@@ -1081,7 +1085,7 @@ unittest
 
                 static if (!directed)
                 {
-                    foreach(immutable e, immutable n; zip(g1.incidentEdges(v), g1.neighbours(v)))
+                    foreach (immutable e, immutable n; zip(g1.incidentEdges(v), g1.neighbours(v)))
                     {
                         if (v <= n)
                         {

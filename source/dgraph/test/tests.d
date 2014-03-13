@@ -128,7 +128,7 @@ void testAddEdge(Graph, bool allAtOnce = false, ushort verbose = 0, T : size_t)
 
 /// Tests that the edgeID function returns correct values for all edges in the graph.
 void testEdgeID(Graph)(ref Graph g)
-    if(isGraph!Graph)
+    if (isGraph!Graph)
 {
     foreach (immutable i; 0 .. g.edgeCount)
     {
@@ -146,9 +146,9 @@ void testEdgeID(Graph)(ref Graph g)
 unittest
 {
     import std.typetuple;
-    foreach(Graph; TypeTuple!(IndexedEdgeList, CachedEdgeList))
+    foreach (Graph; TypeTuple!(IndexedEdgeList, CachedEdgeList))
     {
-        foreach(directed; TypeTuple!(false, true))
+        foreach (directed; TypeTuple!(false, true))
         {
             {
                 import dgraph.test.samplegraph50;
