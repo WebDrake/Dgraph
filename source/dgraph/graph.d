@@ -127,6 +127,70 @@ unittest
     assert(isUndirectedGraph!(CachedEdgeList!false));
 }
 
+private struct VertexRange(Graph, alias OpIndex)
+{
+  private:
+    Graph g;
+    size_t _front;
+    size_t _back;
+
+  public:
+    this(Graph g)
+    {
+        this(g, 0, g.vertexCount);
+    }
+
+    this(Graph g, size_t first, size_t last)
+    {
+        this.g = g;
+        _front = first;
+        _back = last;
+    }
+
+    bool empty() @property @safe const nothrow pure
+    {
+        return _front < _back;
+    }
+
+    auto front() @property
+    {
+        return opIndex(_front);
+    }
+
+    auto back() @property
+    {
+        return opIndex(_back);
+    }
+
+    void popBack() @safe nothrow pure
+    {
+        if (_front < _back)
+        {
+            --_back;
+        }
+    }
+
+    void popFront() @safe nothrow pure
+    {
+        if (_front < _back)
+        {
+            ++_front;
+        }
+    }
+
+    size_t length() @property @safe const nothrow pure
+    {
+        return _back - _front;
+    }
+
+    typeof(this) save() @property @safe nothrow pure
+    {
+        return this;
+    }
+
+    mixin OpIndex;
+}
+
 /**
  * Graph data type based on igraph's igraph_t.  The basic data structure is a
  * pair of arrays whose entries consist of the start and end vertices of the
@@ -142,6 +206,111 @@ final class IndexedEdgeList(bool dir)
     size_t[] _indexTail;
     size_t[] _sumHead = [0];
     size_t[] _sumTail = [0];
+
+    static if (directed)
+    {
+        alias IncidentEdgesIn = VertexRange!(typeof(this), IncidentEdgesInOpIndex);
+        alias IncidentEdgesOut = VertexRange!(typeof(this), IncidentEdgesOutOpIndex);
+        alias NeighboursIn = VertexRange!(typeof(this), NeighboursInOpIndex);
+        alias NeighboursOut = VertexRange!(typeof(this), NeighboursOutOpIndex);
+    }
+    else
+    {
+        alias IncidentEdges = VertexRange!(typeof(this), IncidentEdgesOpIndex);
+        alias Neighbours = VertexRange!(typeof(this), NeighboursOpIndex);
+    }
+
+    mixin template IncidentEdgesInOpIndex()
+    {
+        auto opIndex(in size_t index) @safe const nothrow pure
+        in
+        {
+            assert(index + _front < _back);
+        }
+        body
+        {
+            static assert(g.directed);
+            immutable size_t v = index + _front;
+            return iota(g._sumTail[v], g._sumTail[v + 1]).map!(a => g._indexTail[a]);
+        }
+    }
+
+    mixin template IncidentEdgesOutOpIndex()
+    {
+        auto opIndex(in size_t index) @safe const nothrow pure
+        in
+        {
+            assert(index + _front < _back);
+        }
+        body
+        {
+            static assert(g.directed);
+            immutable size_t v = index + _front;
+            return iota(g._sumHead[v], g._sumHead[v + 1]).map!(a => g._indexHead[a]);
+        }
+    }
+
+    mixin template IncidentEdgesOpIndex()
+    {
+        auto opIndex(in size_t index) @safe const nothrow pure
+        in
+        {
+            assert(index + _front < _back);
+        }
+        body
+        {
+            static assert(!g.directed);
+            immutable size_t v = index + _front;
+            return chain(iota(g._sumTail[v], g._sumTail[v + 1]).map!(a => g._indexTail[a]),
+                         iota(g._sumHead[v], g._sumHead[v + 1]).map!(a => g._indexHead[a]));
+        }
+    }
+
+    mixin template NeighboursInOpIndex()
+    {
+        auto opIndex(in size_t index) @safe const nothrow pure
+        in
+        {
+            assert(index + _front < _back);
+        }
+        body
+        {
+            static assert(g.directed);
+            immutable size_t v = index + _front;
+            return iota(g._sumTail[v], g._sumTail[v + 1]).map!(a => g._head[g._indexTail[a]]);
+        }
+    }
+
+    mixin template NeighboursOutOpIndex()
+    {
+        auto opIndex(in size_t index) @safe const nothrow pure
+        in
+        {
+            assert(index + _front < _back);
+        }
+        body
+        {
+            static assert(g.directed);
+            immutable size_t v = index + _front;
+            return iota(g._sumHead[v], g._sumHead[v + 1]).map!(a => g._tail[g._indexHead[a]]);
+        }
+    }
+
+    mixin template NeighboursOpIndex()
+    {
+        auto opIndex(in size_t index) @safe const nothrow pure
+        in
+        {
+            assert(index + _front < _back);
+        }
+        body
+        {
+            static assert(!g.directed);
+            immutable size_t v = index + _front;
+            return chain(iota(g._sumTail[v], g._sumTail[v + 1]).map!(a => g._head[g._indexTail[a]]),
+                         iota(g._sumHead[v], g._sumHead[v + 1]).map!(a => g._tail[g._indexHead[a]]));
+        }
+    }
 
     void indexEdgesInsertion()
     {
@@ -403,27 +572,23 @@ final class IndexedEdgeList(bool dir)
          * the specified vertex v.  If the graph is undirected the two will be
          * identical and the general method incidentEdges is also defined.
          */
-        auto incidentEdgesIn(in size_t v) const
+        auto incidentEdgesIn() @property @safe nothrow pure
         {
-            enforce(isVertex(v));
-            return iota(_sumTail[v], _sumTail[v + 1]).map!(a => _indexTail[a]);
+            return IncidentEdgesIn(this);
         }
 
         /// ditto
-        auto incidentEdgesOut(in size_t v) const
+        auto incidentEdgesOut() @property @safe nothrow pure
         {
-            enforce(isVertex(v));
-            return iota(_sumHead[v], _sumHead[v + 1]).map!(a => _indexHead[a]);
+            return IncidentEdgesOut(this);
         }
     }
     else
     {
         /// ditto
-        auto incidentEdges(in size_t v) const
+        auto incidentEdges() @property @safe nothrow pure
         {
-            enforce(isVertex(v));
-            return chain(iota(_sumTail[v], _sumTail[v + 1]).map!(a => _indexTail[a]),
-                         iota(_sumHead[v], _sumHead[v + 1]).map!(a => _indexHead[a]));
+            return IncidentEdges(this);
         }
 
         alias incidentEdgesIn  = incidentEdges;
@@ -511,27 +676,23 @@ final class IndexedEdgeList(bool dir)
          * links.  If the graph is undirected the two will be identical and the
          * general neighbours method is also defined.
          */
-        auto neighboursIn(in size_t v) const
+        auto neighboursIn() @property @safe nothrow pure
         {
-            enforce(isVertex(v));
-            return iota(_sumTail[v], _sumTail[v + 1]).map!(a => _head[_indexTail[a]]);
+            return NeighboursIn(this);
         }
 
         /// ditto
-        auto neighboursOut(in size_t v) const
+        auto neighboursOut() @property @safe nothrow pure
         {
-            enforce(isVertex(v));
-            return iota(_sumHead[v], _sumHead[v + 1]).map!(a => _tail[_indexHead[a]]);
+            return NeighboursOut(this);
         }
     }
     else
     {
         /// ditto
-        auto neighbours(in size_t v) const
+        auto neighbours() @property @safe nothrow pure
         {
-            enforce(isVertex(v));
-            return chain(iota(_sumTail[v], _sumTail[v + 1]).map!(a => _head[_indexTail[a]]),
-                         iota(_sumHead[v], _sumHead[v + 1]).map!(a => _tail[_indexHead[a]]));
+            return Neighbours(this);
         }
 
         alias neighbors = neighbours;
@@ -600,11 +761,215 @@ final class CachedEdgeList(bool dir)
         const(size_t)[][] _incidentEdgesOut;
         const(size_t)[][] _neighboursIn;
         const(size_t)[][] _neighboursOut;
+
+        alias IncidentEdgesIn = VertexRange!(typeof(this), IncidentEdgesInOpIndex);
+        alias IncidentEdgesOut = VertexRange!(typeof(this), IncidentEdgesOutOpIndex);
+        alias NeighboursIn = VertexRange!(typeof(this), NeighboursInOpIndex);
+        alias NeighboursOut = VertexRange!(typeof(this), NeighboursOutOpIndex);
     }
     else
     {
         const(size_t)[][] _incidentEdges;
         const(size_t)[][] _neighbours;
+
+        alias IncidentEdges = VertexRange!(typeof(this), IncidentEdgesOpIndex);
+        alias Neighbours = VertexRange!(typeof(this), NeighboursOpIndex);
+    }
+
+    mixin template IncidentEdgesInOpIndex()
+    {
+        auto opIndex(in size_t index) @safe nothrow pure
+        in
+        {
+            assert(index + _front < _back);
+        }
+        body
+        {
+            static assert(g.directed);
+
+            immutable size_t v = index + _front;
+
+            if (g._incidentEdgesIn[v] is null)
+            {
+                immutable size_t start = g._sumTail[v] + g._sumHead[v];
+                immutable size_t end = g._sumHead[v] + g._sumTail[v + 1];
+                size_t j = start;
+                foreach (immutable i; g._sumTail[v] .. g._sumTail[v + 1])
+                {
+                    g._incidentEdgesCache[j] = g._indexTail[i];
+                    ++j;
+                }
+                assert(j == end);
+                g._incidentEdgesIn[v] = g._incidentEdgesCache[start .. end];
+            }
+
+            return g._incidentEdgesIn[v];
+        }
+    }
+
+    mixin template IncidentEdgesOutOpIndex()
+    {
+        auto opIndex(in size_t index) @safe nothrow pure
+        in
+        {
+            assert(index + _front < _back);
+        }
+        body
+        {
+            static assert(g.directed);
+
+            immutable size_t v = index + _front;
+
+            if (g._incidentEdgesOut[v] is null)
+            {
+                immutable size_t start = g._sumHead[v] + g._sumTail[v + 1];
+                immutable size_t end = g._sumTail[v + 1] + g._sumHead[v + 1];
+                size_t j = start;
+                foreach (immutable i; g._sumHead[v] .. g._sumHead[v + 1])
+                {
+                    g._incidentEdgesCache[j] = g._indexHead[i];
+                    ++j;
+                }
+                assert(j == end);
+                g._incidentEdgesOut[v] = g._incidentEdgesCache[start .. end];
+            }
+
+            return g._incidentEdgesOut[v];
+        }
+    }
+
+    mixin template IncidentEdgesOpIndex()
+    {
+        auto opIndex(in size_t index) @safe nothrow pure
+        in
+        {
+            assert(index + _front < _back);
+        }
+        body
+        {
+            static assert(!g.directed);
+
+            immutable size_t v = index + _front;
+
+            if (g._incidentEdges[v] is null)
+            {
+                immutable size_t start = g._sumTail[v] + g._sumHead[v];
+                immutable size_t end = g._sumTail[v + 1] + g._sumHead[v + 1];
+                size_t j = start;
+                foreach (immutable i; g._sumTail[v] .. g._sumTail[v + 1])
+                {
+                    g._incidentEdgesCache[j] = g._indexTail[i];
+                    ++j;
+                }
+                foreach (immutable i; g._sumHead[v] .. g._sumHead[v + 1])
+                {
+                    g._incidentEdgesCache[j] = g._indexHead[i];
+                    ++j;
+                }
+                assert(j == end);
+                g._incidentEdges[v] = g._incidentEdgesCache[start .. end];
+            }
+
+            return g._incidentEdges[v];
+        }
+    }
+
+    mixin template NeighboursInOpIndex()
+    {
+        auto opIndex(in size_t index) @safe nothrow pure
+        in
+        {
+            assert(index + _front < _back);
+        }
+        body
+        {
+            static assert(g.directed);
+
+            immutable size_t v = index + _front;
+
+            if (g._neighboursIn[v] is null)
+            {
+                immutable size_t start = g._sumTail[v] + g._sumHead[v];
+                immutable size_t end = g._sumHead[v] + g._sumTail[v + 1];
+                size_t j = start;
+                foreach (immutable i; g._sumTail[v] .. g._sumTail[v + 1])
+                {
+                    g._neighboursCache[j] = g._head[g._indexTail[i]];
+                    ++j;
+                }
+                assert(j == end);
+                g._neighboursIn[v] = g._neighboursCache[start .. end];
+            }
+
+            return g._neighboursIn[v];
+        }
+    }
+
+    mixin template NeighboursOutOpIndex()
+    {
+        auto opIndex(in size_t index) @safe nothrow pure
+        in
+        {
+            assert(index + _front < _back);
+        }
+        body
+        {
+            static assert(g.directed);
+
+            immutable size_t v = index + _front;
+
+            if (g._neighboursOut[v] is null)
+            {
+                immutable size_t start = g._sumHead[v] + g._sumTail[v + 1];
+                immutable size_t end = g._sumTail[v + 1] + g._sumHead[v + 1];
+                size_t j = start;
+                foreach (immutable i; g._sumHead[v] .. g._sumHead[v + 1])
+                {
+                    g._neighboursCache[j] = g._tail[g._indexHead[i]];
+                    ++j;
+                }
+                assert(j == end);
+                g._neighboursOut[v] = g._neighboursCache[start .. end];
+            }
+
+            return g._neighboursOut[v];
+        }
+    }
+
+    mixin template NeighboursOpIndex()
+    {
+        auto opIndex(in size_t index) @safe nothrow pure
+        in
+        {
+            assert(index + _front < _back);
+        }
+        body
+        {
+            static assert(!g.directed);
+
+            immutable size_t v = index + _front;
+
+            if (g._neighbours[v] is null)
+            {
+                immutable size_t start = g._sumTail[v] + g._sumHead[v];
+                immutable size_t end = g._sumTail[v + 1] + g._sumHead[v + 1];
+                size_t j = start;
+                foreach (immutable i; g._sumTail[v] .. g._sumTail[v + 1])
+                {
+                    g._neighboursCache[j] = g._head[g._indexTail[i]];
+                    ++j;
+                }
+                foreach (immutable i; g._sumHead[v] .. g._sumHead[v + 1])
+                {
+                    g._neighboursCache[j] = g._tail[g._indexHead[i]];
+                    ++j;
+                }
+                assert(j == end);
+                g._neighbours[v] = g._neighboursCache[start .. end];
+            }
+
+            return g._neighbours[v];
+        }
     }
 
   public:
@@ -695,65 +1060,21 @@ final class CachedEdgeList(bool dir)
 
     static if (directed)
     {
-        auto incidentEdgesIn(in size_t v) @safe nothrow pure
+        auto incidentEdgesIn() @property @safe nothrow pure
         {
-            if (_incidentEdgesIn[v] is null)
-            {
-                immutable size_t start = _sumTail[v] + _sumHead[v];
-                immutable size_t end = _sumHead[v] + _sumTail[v + 1];
-                size_t j = start;
-                foreach (immutable i; _sumTail[v] .. _sumTail[v + 1])
-                {
-                    _incidentEdgesCache[j] = _indexTail[i];
-                    ++j;
-                }
-                assert(j == end);
-                _incidentEdgesIn[v] = _incidentEdgesCache[start .. end];
-            }
-            return _incidentEdgesIn[v];
+            return IncidentEdgesIn(this);
         }
 
-        auto incidentEdgesOut(in size_t v) @safe nothrow pure
+        auto incidentEdgesOut() @property @safe nothrow pure
         {
-            if (_incidentEdgesOut[v] is null)
-            {
-                immutable size_t start = _sumHead[v] + _sumTail[v + 1];
-                immutable size_t end = _sumTail[v + 1] + _sumHead[v + 1];
-                size_t j = start;
-                foreach (immutable i; _sumHead[v] .. _sumHead[v + 1])
-                {
-                    _incidentEdgesCache[j] = _indexHead[i];
-                    ++j;
-                }
-                assert(j == end);
-                _incidentEdgesOut[v] = _incidentEdgesCache[start .. end];
-            }
-            return _incidentEdgesOut[v];
+            return IncidentEdgesOut(this);
         }
     }
     else
     {
-        auto incidentEdges(in size_t v) @safe nothrow pure
+        auto incidentEdges() @property @safe nothrow pure
         {
-            if (_incidentEdges[v] is null)
-            {
-                immutable size_t start = _sumTail[v] + _sumHead[v];
-                immutable size_t end = _sumTail[v + 1] + _sumHead[v + 1];
-                size_t j = start;
-                foreach (immutable i; _sumTail[v] .. _sumTail[v + 1])
-                {
-                    _incidentEdgesCache[j] = _indexTail[i];
-                    ++j;
-                }
-                foreach (immutable i; _sumHead[v] .. _sumHead[v + 1])
-                {
-                    _incidentEdgesCache[j] = _indexHead[i];
-                    ++j;
-                }
-                assert(j == end);
-                _incidentEdges[v] = _incidentEdgesCache[start .. end];
-            }
-            return _incidentEdges[v];
+            return IncidentEdges(this);
         }
 
         alias incidentEdgesIn  = incidentEdges;
@@ -767,65 +1088,21 @@ final class CachedEdgeList(bool dir)
 
     static if (directed)
     {
-        auto neighboursIn(in size_t v) @safe nothrow pure
+        auto neighboursIn() @property @safe nothrow pure
         {
-            if (_neighboursIn[v] is null)
-            {
-                immutable size_t start = _sumTail[v] + _sumHead[v];
-                immutable size_t end = _sumHead[v] + _sumTail[v + 1];
-                size_t j = start;
-                foreach (immutable i; _sumTail[v] .. _sumTail[v + 1])
-                {
-                    _neighboursCache[j] = _head[_indexTail[i]];
-                    ++j;
-                }
-                assert(j == end);
-                _neighboursIn[v] = _neighboursCache[start .. end];
-            }
-            return _neighboursIn[v];
+            return NeighboursIn(this);
         }
 
-        auto neighboursOut(in size_t v) @safe nothrow pure
+        auto neighboursOut() @property @safe nothrow pure
         {
-            if (_neighboursOut[v] is null)
-            {
-                immutable size_t start = _sumHead[v] + _sumTail[v + 1];
-                immutable size_t end = _sumTail[v + 1] + _sumHead[v + 1];
-                size_t j = start;
-                foreach (immutable i; _sumHead[v] .. _sumHead[v + 1])
-                {
-                    _neighboursCache[j] = _tail[_indexHead[i]];
-                    ++j;
-                }
-                assert(j == end);
-                _neighboursOut[v] = _neighboursCache[start .. end];
-            }
-            return _neighboursOut[v];
+            return NeighboursOut(this);
         }
     }
     else
     {
-        auto neighbours(in size_t v) @safe nothrow pure
+        auto neighbours() @property @safe nothrow pure
         {
-            if (_neighbours[v] is null)
-            {
-                immutable size_t start = _sumTail[v] + _sumHead[v];
-                immutable size_t end = _sumTail[v + 1] + _sumHead[v + 1];
-                size_t j = start;
-                foreach (immutable i; _sumTail[v] .. _sumTail[v + 1])
-                {
-                    _neighboursCache[j] = _head[_indexTail[i]];
-                    ++j;
-                }
-                foreach (immutable i; _sumHead[v] .. _sumHead[v + 1])
-                {
-                    _neighboursCache[j] = _tail[_indexHead[i]];
-                    ++j;
-                }
-                assert(j == end);
-                _neighbours[v] = _neighboursCache[start .. end];
-            }
-            return _neighbours[v];
+            return Neighbours(this);
         }
 
         alias neighbors = neighbours;
@@ -1055,7 +1332,7 @@ unittest
             // Let's check the edge and neighbour functions.
             foreach (immutable v; 0 .. g1.vertexCount)
             {
-                foreach (immutable e, immutable n; zip(g1.incidentEdgesOut(v), g1.neighboursOut(v)))
+                foreach (immutable e, immutable n; zip(g1.incidentEdgesOut[v], g1.neighboursOut[v]))
                 {
                     if (directed || v <= n)
                     {
@@ -1069,7 +1346,7 @@ unittest
                     }
                 }
 
-                foreach (immutable e, immutable n; zip(g1.incidentEdgesIn(v), g1.neighboursIn(v)))
+                foreach (immutable e, immutable n; zip(g1.incidentEdgesIn[v], g1.neighboursIn[v]))
                 {
                     if (directed || v > n)
                     {
@@ -1085,7 +1362,7 @@ unittest
 
                 static if (!directed)
                 {
-                    foreach (immutable e, immutable n; zip(g1.incidentEdges(v), g1.neighbours(v)))
+                    foreach (immutable e, immutable n; zip(g1.incidentEdges[v], g1.neighbours[v]))
                     {
                         if (v <= n)
                         {

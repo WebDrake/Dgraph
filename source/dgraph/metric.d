@@ -127,7 +127,7 @@ auto ref betweenness(T = double, Graph)(ref Graph g, ref T[] centrality, bool[] 
             q.pop();
             stack[stackLength] = v;
             ++stackLength;
-            foreach (immutable w; g.neighboursOut(v))
+            foreach (immutable w; g.neighboursOut[v])
             {
                 if (ignore && ignore[w])
                 {
@@ -227,11 +227,11 @@ size_t largestClusterSize(Graph)(ref Graph g, bool[] ignore = null)
 
                 static if (g.directed)
                 {
-                    auto allNeighbours = chain(g.neighboursIn(v), g.neighboursOut(v));
+                    auto allNeighbours = chain(g.neighboursIn[v], g.neighboursOut[v]);
                 }
                 else
                 {
-                    auto allNeighbours = g.neighbours(v);
+                    auto allNeighbours = g.neighbours[v];
                 }
 
                 foreach (immutable w; allNeighbours)

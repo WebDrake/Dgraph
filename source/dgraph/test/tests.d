@@ -72,12 +72,12 @@ void testAddEdge(Graph, bool allAtOnce = false, ushort verbose = 0, T : size_t)
         writeln("Number of edges: ", g.edgeCount);
         static if (g.directed)
         {
-            writeln("Incoming neighbours of vertex 0: ", g.neighboursIn(0));
-            writeln("Outgoing neighbours of vertex 0: ", g.neighboursOut(0));
+            writeln("Incoming neighbours of vertex 0: ", g.neighboursIn[0]);
+            writeln("Outgoing neighbours of vertex 0: ", g.neighboursOut[0]);
         }
         else
         {
-            writeln("Neighbours of node 0: ", g.neighbours(0));
+            writeln("Neighbours of node 0: ", g.neighbours[0]);
         }
     }
     static if (verbose > 1)
@@ -105,23 +105,23 @@ void testAddEdge(Graph, bool allAtOnce = false, ushort verbose = 0, T : size_t)
         foreach (immutable i; 0 .. g.vertexCount)
         {
             write("\t", i, ": ");
-            foreach (immutable n; g.neighboursIn(i))
+            foreach (immutable n; g.neighboursIn[i])
             {
                 write(" ", n);
             }
             writeln;
-            assert(isSorted(g.neighboursIn(i)));
+            assert(isSorted(g.neighboursIn[i]));
         }
         writeln("Outgoing neighbours for vertices:");
         foreach (immutable i; 0 .. g.vertexCount)
         {
             write("\t", i, ": ");
-            foreach (immutable n; g.neighboursOut(i))
+            foreach (immutable n; g.neighboursOut[i])
             {
                 write(" ", n);
             }
             writeln;
-            assert(isSorted(g.neighboursOut(i)));
+            assert(isSorted(g.neighboursOut[i]));
         }
     }
 }
