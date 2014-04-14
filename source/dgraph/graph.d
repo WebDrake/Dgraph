@@ -209,6 +209,8 @@ final class IndexedEdgeList(bool dir)
 
     static if (directed)
     {
+        alias DegreeIn = VertexRange!(typeof(this), DegreeInOpIndex);
+        alias DegreeOut = VertexRange!(typeof(this), DegreeOutOpIndex);
         alias IncidentEdgesIn = VertexRange!(typeof(this), IncidentEdgesInOpIndex);
         alias IncidentEdgesOut = VertexRange!(typeof(this), IncidentEdgesOutOpIndex);
         alias NeighboursIn = VertexRange!(typeof(this), NeighboursInOpIndex);
@@ -216,8 +218,55 @@ final class IndexedEdgeList(bool dir)
     }
     else
     {
+        alias Degree = VertexRange!(typeof(this), DegreeOpIndex);
         alias IncidentEdges = VertexRange!(typeof(this), IncidentEdgesOpIndex);
         alias Neighbours = VertexRange!(typeof(this), NeighboursOpIndex);
+    }
+
+    mixin template DegreeInOpIndex()
+    {
+        size_t opIndex(in size_t index) @safe const nothrow pure
+        in
+        {
+            assert(index + _front < _back);
+        }
+        body
+        {
+            static assert(g.directed);
+            immutable size_t v = index + _front;
+            return g._sumTail[v + 1] - g._sumTail[v];
+        }
+    }
+
+    mixin template DegreeOutOpIndex()
+    {
+        size_t opIndex(in size_t index) @safe const nothrow pure
+        in
+        {
+            assert(index + _front < _back);
+        }
+        body
+        {
+            static assert(g.directed);
+            immutable size_t v = index + _front;
+            return g._sumHead[v + 1] - g._sumHead[v];
+        }
+    }
+
+    mixin template DegreeOpIndex()
+    {
+        size_t opIndex(in size_t index) @safe const nothrow pure
+        in
+        {
+            assert(index + _front < _back);
+        }
+        body
+        {
+            static assert(!g.directed);
+            immutable size_t v = index + _front;
+            return (g._sumHead[v + 1] - g._sumHead[v])
+                 + (g._sumTail[v + 1] - g._sumTail[v]);
+        }
     }
 
     mixin template IncidentEdgesInOpIndex()
@@ -431,31 +480,23 @@ final class IndexedEdgeList(bool dir)
          * incoming or outgoing links.  If the graph is undirected, these
          * values are identical and the general degree method is also defined.
          */
-        size_t degreeIn(in size_t v) @safe const pure
+        auto degreeIn() @property @safe nothrow pure
         {
-            enforce(isVertex(v));
-            assert(v + 1 < _sumTail.length);
-            return _sumTail[v + 1] - _sumTail[v];
+            return DegreeIn(this);
         }
 
         ///ditto
-        size_t degreeOut(in size_t v) @safe const pure
+        auto degreeOut() @property @safe nothrow pure
         {
-            enforce(isVertex(v));
-            assert(v + 1 < _sumHead.length);
-            return _sumHead[v + 1] - _sumHead[v];
+            return DegreeOut(this);
         }
     }
     else
     {
         /// Provides the degree of a vertex v in an undirected graph.
-        size_t degree(in size_t v) @safe const pure
+        auto degree() @property @safe nothrow pure
         {
-            enforce(isVertex(v));
-            assert(v + 1 < _sumHead.length);
-            assert(_sumHead.length == _sumTail.length);
-            return (_sumHead[v + 1] - _sumHead[v])
-                 + (_sumTail[v + 1] - _sumTail[v]);
+            return Degree(this);
         }
 
         alias degreeIn = degree;
@@ -515,7 +556,6 @@ final class IndexedEdgeList(bool dir)
         {
             static if (directed)
             {
-                assert(degreeOut(head) == 0);
                 throw new Exception(format("Vertex %s has no outgoing neighbours.", head));
             }
             else
@@ -528,7 +568,6 @@ final class IndexedEdgeList(bool dir)
         {
             static if (directed)
             {
-                assert(degreeIn(tail) == 0);
                 throw new Exception(format("Vertex %s has no incoming neighbours.", tail));
             }
             else
@@ -1020,21 +1059,21 @@ final class CachedEdgeList(bool dir)
 
     static if (directed)
     {
-        size_t degreeIn(in size_t v) @safe const pure
+        auto degreeIn() @property @safe nothrow pure
         {
-            return _graph.degreeIn(v);
+            return _graph.degreeIn;
         }
 
-        size_t degreeOut(in size_t v) @safe const pure
+        auto degreeOut() @property @safe nothrow pure
         {
-            return _graph.degreeOut(v);
+            return _graph.degreeOut;
         }
     }
     else
     {
-        size_t degree(in size_t v) @safe const pure
+        auto degree() @property @safe nothrow pure
         {
-            return _graph.degree(v);
+            return _graph.degree;
         }
 
         alias degreeIn = degree;
@@ -1233,11 +1272,11 @@ unittest
 
             foreach (immutable v; 0 .. g1.vertexCount)
             {
-                assert(g1.degreeIn(v) == g2.degreeIn(v));
-                assert(g1.degreeOut(v) == g2.degreeOut(v));
+                assert(g1.degreeIn[v] == g2.degreeIn[v]);
+                assert(g1.degreeOut[v] == g2.degreeOut[v]);
                 static if (!directed)
                 {
-                    assert(g1.degree(v) == g2.degree(v));
+                    assert(g1.degree[v] == g2.degree[v]);
                 }
             }
 

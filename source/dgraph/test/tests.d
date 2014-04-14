@@ -87,7 +87,7 @@ void testAddEdge(Graph, bool allAtOnce = false, ushort verbose = 0, T : size_t)
             writeln("In- and out-degrees of vertices:");
             foreach (immutable i; 0 .. g.vertexCount)
             {
-                writeln("\t", i, "\t", g.degreeIn(i), "\t", g.degreeOut(i));
+                writeln("\t", i, "\t", g.degreeIn[i], "\t", g.degreeOut[i]);
             }
         }
         else
@@ -95,7 +95,7 @@ void testAddEdge(Graph, bool allAtOnce = false, ushort verbose = 0, T : size_t)
             writeln("Degrees of vertices:");
             foreach (immutable i; 0 .. g.vertexCount)
             {
-                writeln("\t", i, "\t", g.degree(i));
+                writeln("\t", i, "\t", g.degree[i]);
             }
         }
     }
