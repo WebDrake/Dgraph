@@ -127,12 +127,14 @@ unittest
     assert(isUndirectedGraph!(CachedEdgeList!false));
 }
 
-private struct VertexRange(Graph, alias OpIndex)
+private struct VertexRange(Graph, alias _OpIndex)
 {
   private:
     Graph g;
     size_t _front;
     size_t _back;
+
+    mixin _OpIndex;
 
   public:
     this(Graph g)
@@ -141,6 +143,12 @@ private struct VertexRange(Graph, alias OpIndex)
     }
 
     this(Graph g, size_t first, size_t last)
+    in
+    {
+        assert(first <= last);
+        assert(last <= g.vertexCount);
+    }
+    body
     {
         this.g = g;
         _front = first;
@@ -149,33 +157,47 @@ private struct VertexRange(Graph, alias OpIndex)
 
     bool empty() @property @safe const nothrow pure
     {
-        return _front < _back;
+        return !(_front < _back);
     }
 
     auto front() @property
+    in
     {
-        return opIndex(_front);
+        assert(!this.empty);
+    }
+    body
+    {
+        return _opIndex(_front);
     }
 
     auto back() @property
+    in
     {
-        return opIndex(_back);
+        assert(!this.empty);
+    }
+    body
+    {
+        return _opIndex(_back - 1);
     }
 
     void popBack() @safe nothrow pure
+    in
     {
-        if (_front < _back)
-        {
-            --_back;
-        }
+        assert(!this.empty);
+    }
+    body
+    {
+        --_back;
     }
 
     void popFront() @safe nothrow pure
+    in
     {
-        if (_front < _back)
-        {
-            ++_front;
-        }
+        assert(!this.empty);
+    }
+    body
+    {
+        ++_front;
     }
 
     size_t length() @property @safe const nothrow pure
@@ -188,7 +210,94 @@ private struct VertexRange(Graph, alias OpIndex)
         return this;
     }
 
-    mixin OpIndex;
+    auto opIndex(in size_t i) @safe nothrow pure
+    in
+    {
+        assert(i < this.length);
+    }
+    body
+    {
+        immutable size_t v = i + _front;
+        return this._opIndex(v);
+    }
+
+    typeof(this) opSlice() @safe nothrow pure
+    {
+        return this;
+    }
+
+    typeof(this) opSlice(size_t a, size_t b) @safe nothrow pure
+    in
+    {
+        assert(a <= b);
+        assert(b <= this.length);
+        assert(_front + b <= g.vertexCount);
+    }
+    body
+    {
+        return typeof(this)(g, _front + a, _front + b);
+    }
+}
+
+unittest
+{
+    struct PretendGraph
+    {
+        size_t[10] data = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        enum size_t vertexCount = data.length;
+    }
+
+    template PretendOpIndex()
+    {
+        auto _opIndex(in size_t v)
+        in
+        {
+            assert(v < g.vertexCount);
+        }
+        body
+        {
+            return g.data[v];
+        }
+    }
+
+    PretendGraph graph;
+
+    auto vertRange = VertexRange!(PretendGraph, PretendOpIndex)(graph);
+
+    foreach(i, v; zip(iota(10), vertRange))
+    {
+        assert(i == v);
+    }
+
+    auto vertSlice1 = vertRange[3 .. 9];
+
+    foreach(i, v; zip(iota(3, 9), vertSlice1))
+    {
+        assert(i == v);
+    }
+
+    auto vertSlice2 = vertSlice1[1 .. 5];
+
+    foreach(i, v; zip(iota(4, 8), vertSlice2))
+    {
+        assert(i == v);
+    }
+
+    assert(vertSlice2.length == 4);
+
+    vertSlice2.popFront();
+    assert(vertSlice2.front == 5);
+
+    vertSlice2.popBack();
+    assert(vertSlice2.back == 6);
+    assert(vertSlice2.length == 2);
+
+    vertSlice2.popFront();
+    assert(vertSlice2.front == 6);
+    assert(vertSlice2.back == 6);
+
+    vertSlice2.popBack();
+    assert(vertSlice2.empty);
 }
 
 /**
@@ -225,45 +334,42 @@ final class IndexedEdgeList(bool dir)
 
     mixin template DegreeInOpIndex()
     {
-        size_t opIndex(in size_t index) @safe const nothrow pure
+        size_t _opIndex(in size_t v) @safe const nothrow pure
         in
         {
-            assert(index + _front < _back);
+            assert(v < g.vertexCount);
         }
         body
         {
             static assert(g.directed);
-            immutable size_t v = index + _front;
             return g._sumTail[v + 1] - g._sumTail[v];
         }
     }
 
     mixin template DegreeOutOpIndex()
     {
-        size_t opIndex(in size_t index) @safe const nothrow pure
+        size_t _opIndex(in size_t v) @safe const nothrow pure
         in
         {
-            assert(index + _front < _back);
+            assert(v < g.vertexCount);
         }
         body
         {
             static assert(g.directed);
-            immutable size_t v = index + _front;
             return g._sumHead[v + 1] - g._sumHead[v];
         }
     }
 
     mixin template DegreeOpIndex()
     {
-        size_t opIndex(in size_t index) @safe const nothrow pure
+        size_t _opIndex(in size_t v) @safe const nothrow pure
         in
         {
-            assert(index + _front < _back);
+            assert(v < g.vertexCount);
         }
         body
         {
             static assert(!g.directed);
-            immutable size_t v = index + _front;
             return (g._sumHead[v + 1] - g._sumHead[v])
                  + (g._sumTail[v + 1] - g._sumTail[v]);
         }
@@ -271,45 +377,42 @@ final class IndexedEdgeList(bool dir)
 
     mixin template IncidentEdgesInOpIndex()
     {
-        auto opIndex(in size_t index) @safe const nothrow pure
+        auto _opIndex(in size_t v) @safe const nothrow pure
         in
         {
-            assert(index + _front < _back);
+            assert(v < g.vertexCount);
         }
         body
         {
             static assert(g.directed);
-            immutable size_t v = index + _front;
             return iota(g._sumTail[v], g._sumTail[v + 1]).map!(a => g._indexTail[a]);
         }
     }
 
     mixin template IncidentEdgesOutOpIndex()
     {
-        auto opIndex(in size_t index) @safe const nothrow pure
+        auto _opIndex(in size_t v) @safe const nothrow pure
         in
         {
-            assert(index + _front < _back);
+            assert(v < g.vertexCount);
         }
         body
         {
             static assert(g.directed);
-            immutable size_t v = index + _front;
             return iota(g._sumHead[v], g._sumHead[v + 1]).map!(a => g._indexHead[a]);
         }
     }
 
     mixin template IncidentEdgesOpIndex()
     {
-        auto opIndex(in size_t index) @safe const nothrow pure
+        auto _opIndex(in size_t v) @safe const nothrow pure
         in
         {
-            assert(index + _front < _back);
+            assert(v < g.vertexCount);
         }
         body
         {
             static assert(!g.directed);
-            immutable size_t v = index + _front;
             return chain(iota(g._sumTail[v], g._sumTail[v + 1]).map!(a => g._indexTail[a]),
                          iota(g._sumHead[v], g._sumHead[v + 1]).map!(a => g._indexHead[a]));
         }
@@ -317,45 +420,42 @@ final class IndexedEdgeList(bool dir)
 
     mixin template NeighboursInOpIndex()
     {
-        auto opIndex(in size_t index) @safe const nothrow pure
+        auto _opIndex(in size_t v) @safe const nothrow pure
         in
         {
-            assert(index + _front < _back);
+            assert(v < g.vertexCount);
         }
         body
         {
             static assert(g.directed);
-            immutable size_t v = index + _front;
             return iota(g._sumTail[v], g._sumTail[v + 1]).map!(a => g._head[g._indexTail[a]]);
         }
     }
 
     mixin template NeighboursOutOpIndex()
     {
-        auto opIndex(in size_t index) @safe const nothrow pure
+        auto _opIndex(in size_t v) @safe const nothrow pure
         in
         {
-            assert(index + _front < _back);
+            assert(v < g.vertexCount);
         }
         body
         {
             static assert(g.directed);
-            immutable size_t v = index + _front;
             return iota(g._sumHead[v], g._sumHead[v + 1]).map!(a => g._tail[g._indexHead[a]]);
         }
     }
 
     mixin template NeighboursOpIndex()
     {
-        auto opIndex(in size_t index) @safe const nothrow pure
+        auto _opIndex(in size_t v) @safe const nothrow pure
         in
         {
-            assert(index + _front < _back);
+            assert(v < g.vertexCount);
         }
         body
         {
             static assert(!g.directed);
-            immutable size_t v = index + _front;
             return chain(iota(g._sumTail[v], g._sumTail[v + 1]).map!(a => g._head[g._indexTail[a]]),
                          iota(g._sumHead[v], g._sumHead[v + 1]).map!(a => g._tail[g._indexHead[a]]));
         }
@@ -817,17 +917,14 @@ final class CachedEdgeList(bool dir)
 
     mixin template IncidentEdgesInOpIndex()
     {
-        auto opIndex(in size_t index) @safe nothrow pure
+        auto _opIndex(in size_t v) @safe nothrow pure
         in
         {
-            assert(index + _front < _back);
+            assert(v < g.vertexCount);
         }
         body
         {
             static assert(g.directed);
-
-            immutable size_t v = index + _front;
-
             if (g._incidentEdgesIn[v] is null)
             {
                 immutable size_t start = g._sumTail[v] + g._sumHead[v];
@@ -841,24 +938,20 @@ final class CachedEdgeList(bool dir)
                 assert(j == end);
                 g._incidentEdgesIn[v] = g._incidentEdgesCache[start .. end];
             }
-
             return g._incidentEdgesIn[v];
         }
     }
 
     mixin template IncidentEdgesOutOpIndex()
     {
-        auto opIndex(in size_t index) @safe nothrow pure
+        auto _opIndex(in size_t v) @safe nothrow pure
         in
         {
-            assert(index + _front < _back);
+            assert(v < g.vertexCount);
         }
         body
         {
             static assert(g.directed);
-
-            immutable size_t v = index + _front;
-
             if (g._incidentEdgesOut[v] is null)
             {
                 immutable size_t start = g._sumHead[v] + g._sumTail[v + 1];
@@ -872,24 +965,20 @@ final class CachedEdgeList(bool dir)
                 assert(j == end);
                 g._incidentEdgesOut[v] = g._incidentEdgesCache[start .. end];
             }
-
             return g._incidentEdgesOut[v];
         }
     }
 
     mixin template IncidentEdgesOpIndex()
     {
-        auto opIndex(in size_t index) @safe nothrow pure
+        auto _opIndex(in size_t v) @safe nothrow pure
         in
         {
-            assert(index + _front < _back);
+            assert(v < g.vertexCount);
         }
         body
         {
             static assert(!g.directed);
-
-            immutable size_t v = index + _front;
-
             if (g._incidentEdges[v] is null)
             {
                 immutable size_t start = g._sumTail[v] + g._sumHead[v];
@@ -908,24 +997,20 @@ final class CachedEdgeList(bool dir)
                 assert(j == end);
                 g._incidentEdges[v] = g._incidentEdgesCache[start .. end];
             }
-
             return g._incidentEdges[v];
         }
     }
 
     mixin template NeighboursInOpIndex()
     {
-        auto opIndex(in size_t index) @safe nothrow pure
+        auto _opIndex(in size_t v) @safe nothrow pure
         in
         {
-            assert(index + _front < _back);
+            assert(v < g.vertexCount);
         }
         body
         {
             static assert(g.directed);
-
-            immutable size_t v = index + _front;
-
             if (g._neighboursIn[v] is null)
             {
                 immutable size_t start = g._sumTail[v] + g._sumHead[v];
@@ -939,24 +1024,20 @@ final class CachedEdgeList(bool dir)
                 assert(j == end);
                 g._neighboursIn[v] = g._neighboursCache[start .. end];
             }
-
             return g._neighboursIn[v];
         }
     }
 
     mixin template NeighboursOutOpIndex()
     {
-        auto opIndex(in size_t index) @safe nothrow pure
+        auto _opIndex(in size_t v) @safe nothrow pure
         in
         {
-            assert(index + _front < _back);
+            assert(v < g.vertexCount);
         }
         body
         {
             static assert(g.directed);
-
-            immutable size_t v = index + _front;
-
             if (g._neighboursOut[v] is null)
             {
                 immutable size_t start = g._sumHead[v] + g._sumTail[v + 1];
@@ -970,24 +1051,20 @@ final class CachedEdgeList(bool dir)
                 assert(j == end);
                 g._neighboursOut[v] = g._neighboursCache[start .. end];
             }
-
             return g._neighboursOut[v];
         }
     }
 
     mixin template NeighboursOpIndex()
     {
-        auto opIndex(in size_t index) @safe nothrow pure
+        auto _opIndex(in size_t v) @safe nothrow pure
         in
         {
-            assert(index + _front < _back);
+            assert(v < g.vertexCount);
         }
         body
         {
             static assert(!g.directed);
-
-            immutable size_t v = index + _front;
-
             if (g._neighbours[v] is null)
             {
                 immutable size_t start = g._sumTail[v] + g._sumHead[v];
@@ -1006,7 +1083,6 @@ final class CachedEdgeList(bool dir)
                 assert(j == end);
                 g._neighbours[v] = g._neighboursCache[start .. end];
             }
-
             return g._neighbours[v];
         }
     }
