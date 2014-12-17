@@ -10,7 +10,7 @@ module dgraph.test.samplegraph50;
   Each successive pair of array entries represents a single
   undirected link.
 */
-immutable size_t sampleGraph50[200] =
+immutable size_t[200] sampleGraph50 =
   [ 0, 24,
     0, 25,
     0, 16,
