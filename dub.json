@@ -1,6 +1,5 @@
 {
 	"name": "dgraph",
-	"version": "~master",
 	"description": "A library for creating, analysing and manipulating graphs (networks).  It aims to be fast and memory-efficient while also being easy to use and extend.",
 	"authors": ["Joseph Rushton Wakeling"],
 	"copyright": "Copyright © 2013 Joseph Rushton Wakeling",
@@ -13,21 +12,21 @@
 			"name": "graphtest",
 			"targetType": "executable",
 			"sourcePaths": ["util/graphtest/source/"],
-			"dependencies": { "dgraph": "~master" }
+			"dependencies": { "dgraph": "==0.0.1" }
 		},
 
 		{
 			"name": "betweenness50",
 			"targetType": "executable",
 			"sourcePaths": ["util/betweenness50/source/"],
-			"dependencies": { "dgraph": "~master" }
+			"dependencies": { "dgraph": "==0.0.1" }
 		},
 
 		{
 			"name": "betweenness10k",
 			"targetType": "executable",
 			"sourcePaths": ["util/betweenness10k/source/"],
-			"dependencies": { "dgraph": "~master" }
+			"dependencies": { "dgraph": "==0.0.1" }
 		}
 
 	]
