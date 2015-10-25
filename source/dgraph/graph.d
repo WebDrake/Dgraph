@@ -591,66 +591,66 @@ final class IndexedEdgeList(bool dir)
 final class CachedEdgeList(bool dir)
 {
   private:
-    IndexedEdgeList!dir _graph;
-    size_t[] _incidentEdgesCache;
-    size_t[] _neighboursCache;
+    IndexedEdgeList!dir graph_;
+    size_t[] incidentEdgesCache_;
+    size_t[] neighboursCache_;
 
     static if (directed)
     {
-        const(size_t)[][] _incidentEdgesIn;
-        const(size_t)[][] _incidentEdgesOut;
-        const(size_t)[][] _neighboursIn;
-        const(size_t)[][] _neighboursOut;
+        const(size_t)[][] incidentEdgesIn_;
+        const(size_t)[][] incidentEdgesOut_;
+        const(size_t)[][] neighboursIn_;
+        const(size_t)[][] neighboursOut_;
     }
     else
     {
-        const(size_t)[][] _incidentEdges;
-        const(size_t)[][] _neighbours;
+        const(size_t)[][] incidentEdges_;
+        const(size_t)[][] neighbours_;
     }
 
   public:
     this()
     {
-        _graph = new IndexedEdgeList!dir;
+        graph_ = new IndexedEdgeList!dir;
     }
 
-    alias _graph this;
+    alias graph_ this;
 
     void addEdge()(size_t tail, size_t head)
     {
-        _graph.addEdge(tail, head);
-        _neighboursCache.length = 2 * tail_.length;
-        _incidentEdgesCache.length = 2 * tail_.length;
+        graph_.addEdge(tail, head);
+        neighboursCache_.length = 2 * tail_.length;
+        incidentEdgesCache_.length = 2 * tail_.length;
         static if (directed)
         {
-            _neighboursIn[] = null;
-            _neighboursOut[] = null;
-            _incidentEdgesIn[] = null;
-            _incidentEdgesOut[] = null;
+            neighboursIn_[] = null;
+            neighboursOut_[] = null;
+            incidentEdgesIn_[] = null;
+            incidentEdgesOut_[] = null;
         }
         else
         {
-            _neighbours[] = null;
-            _incidentEdges[] = null;
+            neighbours_[] = null;
+            incidentEdges_[] = null;
         }
     }
 
     void addEdge(T : size_t)(T[] edgeList)
     {
-        _graph.addEdge(edgeList);
-        _neighboursCache.length = 2 * tail_.length;
-        _incidentEdgesCache.length = 2 * tail_.length;
+        graph_.addEdge(edgeList);
+        neighboursCache_.length = 2 * tail_.length;
+        incidentEdgesCache_.length = 2 * tail_.length;
         static if (directed)
         {
-            _neighboursIn[] = null;
-            _neighboursOut[] = null;
-            _incidentEdgesIn[] = null;
-            _incidentEdgesOut[] = null;
+            neighboursIn_[] = null;
+            neighboursOut_[] = null;
+            incidentEdgesIn_[] = null;
+            incidentEdgesOut_[] = null;
         }
         else
         {
-            _neighbours[] = null;
-            _incidentEdges[] = null;
+            neighbours_[] = null;
+            incidentEdges_[] = null;
         }
     }
 
@@ -658,19 +658,19 @@ final class CachedEdgeList(bool dir)
     {
         size_t degreeIn(in size_t v) @safe const pure
         {
-            return _graph.degreeIn(v);
+            return graph_.degreeIn(v);
         }
 
         size_t degreeOut(in size_t v) @safe const pure
         {
-            return _graph.degreeOut(v);
+            return graph_.degreeOut(v);
         }
     }
     else
     {
         size_t degree(in size_t v) @safe const pure
         {
-            return _graph.degree(v);
+            return graph_.degree(v);
         }
 
         alias degreeIn = degree;
@@ -681,80 +681,80 @@ final class CachedEdgeList(bool dir)
 
     auto edge() @property @safe const nothrow pure
     {
-        return _graph.edge;
+        return graph_.edge;
     }
 
     size_t edgeCount() @property @safe const nothrow pure
     {
-        return _graph.edgeCount;
+        return graph_.edgeCount;
     }
 
     size_t edgeID(size_t tail, size_t head) const
     {
-        return _graph.edgeID(tail, head);
+        return graph_.edgeID(tail, head);
     }
 
     static if (directed)
     {
         auto incidentEdgesIn(in size_t v) @safe nothrow pure
         {
-            if (_incidentEdgesIn[v] is null)
+            if (incidentEdgesIn_[v] is null)
             {
                 immutable size_t start = sumHead_[v] + sumTail_[v];
                 immutable size_t end = sumTail_[v] + sumHead_[v + 1];
                 size_t j = start;
                 foreach (immutable i; sumHead_[v] .. sumHead_[v + 1])
                 {
-                    _incidentEdgesCache[j] = indexHead_[i];
+                    incidentEdgesCache_[j] = indexHead_[i];
                     ++j;
                 }
                 assert(j == end);
-                _incidentEdgesIn[v] = _incidentEdgesCache[start .. end];
+                incidentEdgesIn_[v] = incidentEdgesCache_[start .. end];
             }
-            return _incidentEdgesIn[v];
+            return incidentEdgesIn_[v];
         }
 
         auto incidentEdgesOut(in size_t v) @safe nothrow pure
         {
-            if (_incidentEdgesOut[v] is null)
+            if (incidentEdgesOut_[v] is null)
             {
                 immutable size_t start = sumTail_[v] + sumHead_[v + 1];
                 immutable size_t end = sumHead_[v + 1] + sumTail_[v + 1];
                 size_t j = start;
                 foreach (immutable i; sumTail_[v] .. sumTail_[v + 1])
                 {
-                    _incidentEdgesCache[j] = indexTail_[i];
+                    incidentEdgesCache_[j] = indexTail_[i];
                     ++j;
                 }
                 assert(j == end);
-                _incidentEdgesOut[v] = _incidentEdgesCache[start .. end];
+                incidentEdgesOut_[v] = incidentEdgesCache_[start .. end];
             }
-            return _incidentEdgesOut[v];
+            return incidentEdgesOut_[v];
         }
     }
     else
     {
         auto incidentEdges(in size_t v) @safe nothrow pure
         {
-            if (_incidentEdges[v] is null)
+            if (incidentEdges_[v] is null)
             {
                 immutable size_t start = sumHead_[v] + sumTail_[v];
                 immutable size_t end = sumHead_[v + 1] + sumTail_[v + 1];
                 size_t j = start;
                 foreach (immutable i; sumHead_[v] .. sumHead_[v + 1])
                 {
-                    _incidentEdgesCache[j] = indexHead_[i];
+                    incidentEdgesCache_[j] = indexHead_[i];
                     ++j;
                 }
                 foreach (immutable i; sumTail_[v] .. sumTail_[v + 1])
                 {
-                    _incidentEdgesCache[j] = indexTail_[i];
+                    incidentEdgesCache_[j] = indexTail_[i];
                     ++j;
                 }
                 assert(j == end);
-                _incidentEdges[v] = _incidentEdgesCache[start .. end];
+                incidentEdges_[v] = incidentEdgesCache_[start .. end];
             }
-            return _incidentEdges[v];
+            return incidentEdges_[v];
         }
 
         alias incidentEdgesIn  = incidentEdges;
@@ -763,70 +763,70 @@ final class CachedEdgeList(bool dir)
 
     bool isEdge(size_t tail, size_t head) const
     {
-        return _graph.isEdge(tail, head);
+        return graph_.isEdge(tail, head);
     }
 
     static if (directed)
     {
         auto neighboursIn(in size_t v) @safe nothrow pure
         {
-            if (_neighboursIn[v] is null)
+            if (neighboursIn_[v] is null)
             {
                 immutable size_t start = sumHead_[v] + sumTail_[v];
                 immutable size_t end = sumTail_[v] + sumHead_[v + 1];
                 size_t j = start;
                 foreach (immutable i; sumHead_[v] .. sumHead_[v + 1])
                 {
-                    _neighboursCache[j] = tail_[indexHead_[i]];
+                    neighboursCache_[j] = tail_[indexHead_[i]];
                     ++j;
                 }
                 assert(j == end);
-                _neighboursIn[v] = _neighboursCache[start .. end];
+                neighboursIn_[v] = neighboursCache_[start .. end];
             }
-            return _neighboursIn[v];
+            return neighboursIn_[v];
         }
 
         auto neighboursOut(in size_t v) @safe nothrow pure
         {
-            if (_neighboursOut[v] is null)
+            if (neighboursOut_[v] is null)
             {
                 immutable size_t start = sumTail_[v] + sumHead_[v + 1];
                 immutable size_t end = sumHead_[v + 1] + sumTail_[v + 1];
                 size_t j = start;
                 foreach (immutable i; sumTail_[v] .. sumTail_[v + 1])
                 {
-                    _neighboursCache[j] = head_[indexTail_[i]];
+                    neighboursCache_[j] = head_[indexTail_[i]];
                     ++j;
                 }
                 assert(j == end);
-                _neighboursOut[v] = _neighboursCache[start .. end];
+                neighboursOut_[v] = neighboursCache_[start .. end];
             }
-            return _neighboursOut[v];
+            return neighboursOut_[v];
         }
     }
     else
     {
         auto neighbours(in size_t v) @safe nothrow pure
         {
-            if (_neighbours[v] is null)
+            if (neighbours_[v] is null)
             {
                 immutable size_t start = sumHead_[v] + sumTail_[v];
                 immutable size_t end = sumHead_[v + 1] + sumTail_[v + 1];
                 size_t j = start;
                 foreach (immutable i; sumHead_[v] .. sumHead_[v + 1])
                 {
-                    _neighboursCache[j] = tail_[indexHead_[i]];
+                    neighboursCache_[j] = tail_[indexHead_[i]];
                     ++j;
                 }
                 foreach (immutable i; sumTail_[v] .. sumTail_[v + 1])
                 {
-                    _neighboursCache[j] = head_[indexTail_[i]];
+                    neighboursCache_[j] = head_[indexTail_[i]];
                     ++j;
                 }
                 assert(j == end);
-                _neighbours[v] = _neighboursCache[start .. end];
+                neighbours_[v] = neighboursCache_[start .. end];
             }
-            return _neighbours[v];
+            return neighbours_[v];
         }
 
         alias neighbors = neighbours;
@@ -839,51 +839,51 @@ final class CachedEdgeList(bool dir)
 
     size_t vertexCount() @property @safe const nothrow pure
     {
-        return _graph.vertexCount;
+        return graph_.vertexCount;
     }
 
     size_t vertexCount(in size_t n) @property @safe pure
     {
         static if (directed)
         {
-            assert(sumHead_.length == _neighboursIn.length + 1);
-            assert(sumTail_.length == _neighboursOut.length + 1);
-            assert(sumHead_.length == _incidentEdgesIn.length + 1);
-            assert(sumTail_.length == _incidentEdgesOut.length + 1);
+            assert(sumHead_.length == neighboursIn_.length + 1);
+            assert(sumTail_.length == neighboursOut_.length + 1);
+            assert(sumHead_.length == incidentEdgesIn_.length + 1);
+            assert(sumTail_.length == incidentEdgesOut_.length + 1);
         }
         else
         {
-            assert(sumTail_.length == _neighbours.length + 1);
-            assert(sumHead_.length == _incidentEdges.length + 1);
+            assert(sumTail_.length == neighbours_.length + 1);
+            assert(sumHead_.length == incidentEdges_.length + 1);
         }
 
         immutable size_t l = sumTail_.length;
-        _graph.vertexCount = n;
+        graph_.vertexCount = n;
 
         static if (directed)
         {
-            _neighboursIn.length = n;
-            _neighboursOut.length = n;
-            _incidentEdgesIn.length = n;
-            _incidentEdgesOut.length = n;
+            neighboursIn_.length = n;
+            neighboursOut_.length = n;
+            incidentEdgesIn_.length = n;
+            incidentEdgesOut_.length = n;
 
             if (n >= l)
             {
-                _neighboursIn[l - 1 .. $] = null;
-                _neighboursOut[l - 1 .. $] = null;
-                _incidentEdgesIn[l - 1 .. $] = null;
-                _incidentEdgesOut[l - 1 .. $] = null;
+                neighboursIn_[l - 1 .. $] = null;
+                neighboursOut_[l - 1 .. $] = null;
+                incidentEdgesIn_[l - 1 .. $] = null;
+                incidentEdgesOut_[l - 1 .. $] = null;
             }
         }
         else
         {
-            _neighbours.length = n;
-            _incidentEdges.length = n;
+            neighbours_.length = n;
+            incidentEdges_.length = n;
 
             if (n >= l)
             {
-                _neighbours[l - 1 .. $] = null;
-                _incidentEdges[l - 1 .. $] = null;
+                neighbours_[l - 1 .. $] = null;
+                incidentEdges_[l - 1 .. $] = null;
             }
         }
         return vertexCount;

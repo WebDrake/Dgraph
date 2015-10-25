@@ -15,7 +15,7 @@ import dgraph.graph;
  */
 struct VertexQueue
 {
-    private size_t _length, maxLength, head, tail;
+    private size_t length_, maxLength, head, tail;
     private size_t[] queue;
 
     this(size_t m)
@@ -26,12 +26,12 @@ struct VertexQueue
 
     bool empty() @property const pure nothrow
     {
-        return (_length == 0);
+        return (length_ == 0);
     }
 
     size_t length() @property const pure nothrow
     {
-        return _length;
+        return length_;
     }
 
     void push(immutable size_t v) nothrow
@@ -39,8 +39,8 @@ struct VertexQueue
         assert(v < maxLength, "Vertex ID is too large!");
         queue[tail] = v;
         tail = (tail + 1) % maxLength;
-        ++_length;
-        assert(_length <= maxLength, "Length has exceeded total number of vertices!");
+        ++length_;
+        assert(length_ <= maxLength, "Length has exceeded total number of vertices!");
     }
 
     auto front() @property const pure
@@ -52,7 +52,7 @@ struct VertexQueue
     void pop() nothrow
     {
         head = (head + 1) % maxLength;
-        --_length;
+        --length_;
     }
 }
 
