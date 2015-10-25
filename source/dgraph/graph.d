@@ -766,6 +766,11 @@ final class CachedEdgeList(bool dir)
         return graph_.isEdge(tail, head);
     }
 
+    bool isVertex(T : size_t)(in T v) @safe const nothrow pure
+    {
+        return graph_.isVertex(v);
+    }
+
     static if (directed)
     {
         auto neighboursIn(in size_t v) @safe nothrow pure
@@ -907,6 +912,16 @@ unittest
             g1.vertexCount = g2.vertexCount = 10;
             assert(g1.vertexCount == 10);
             assert(g2.vertexCount == 10);
+
+            foreach (v; 0 .. 10)
+            {
+                assert(g1.isVertex(v), format("%s should be a vertex!"));
+            }
+
+            foreach (v; 10 .. 20)
+            {
+                assert(!g1.isVertex(v), format("%s should not be a vertex!"));
+            }
 
             g1.addEdge(5, 8);
             g1.addEdge(5, 4);
