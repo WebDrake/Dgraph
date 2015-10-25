@@ -129,60 +129,61 @@ unittest
 
 /**
  * Graph data type based on igraph's igraph_t.  The basic data structure is a
- * pair of arrays whose entries consist of the start and end vertices of the
- * edges in the graph.  These are supplemented by sorted indices and cumulative
- * sums that enable fast calculation of graph properties from the stored data.
+ * pair of arrays whose entries consist of respectively the source (tail) and
+ * destination (head) vertices of the edges in the graph.  These are extended
+ * by sorted indices and cumulative sums that enable fast calculation of graph
+ * properties from the stored data.
  */
 final class IndexedEdgeList(bool dir)
 {
   private:
-    size_t[] _head;
-    size_t[] _tail;
-    size_t[] _indexHead;
-    size_t[] _indexTail;
-    size_t[] _sumHead = [0];
-    size_t[] _sumTail = [0];
+    size_t[] tail_;
+    size_t[] head_;
+    size_t[] indexTail_;
+    size_t[] indexHead_;
+    size_t[] sumTail_ = [0];
+    size_t[] sumHead_ = [0];
 
     void indexEdgesInsertion()
     {
-        assert(_indexHead.length == _indexTail.length);
-        assert(_head.length == _tail.length);
-        immutable size_t l = _indexHead.length;
-        _indexHead.length = _head.length;
-        _indexTail.length = _tail.length;
-        foreach (immutable e; l .. _head.length)
+        assert(indexTail_.length == indexHead_.length);
+        assert(tail_.length == head_.length);
+        immutable size_t l = indexTail_.length;
+        indexTail_.length = tail_.length;
+        indexHead_.length = head_.length;
+        foreach (immutable e; l .. tail_.length)
         {
             size_t i, j, lower, upper;
-            upper = _indexHead[0 .. e].map!(a => _head[a]).assumeSorted.lowerBound(_head[e] + 1).length;
-            lower = _indexHead[0 .. upper].map!(a => _head[a]).assumeSorted.lowerBound(_head[e]).length;
-            i = lower + _indexHead[lower .. upper].map!(a => _tail[a]).assumeSorted.lowerBound(_tail[e]).length;
+            upper = indexTail_[0 .. e].map!(a => tail_[a]).assumeSorted.lowerBound(tail_[e] + 1).length;
+            lower = indexTail_[0 .. upper].map!(a => tail_[a]).assumeSorted.lowerBound(tail_[e]).length;
+            i = lower + indexTail_[lower .. upper].map!(a => head_[a]).assumeSorted.lowerBound(head_[e]).length;
             for (j = e; j > i; --j)
             {
-                _indexHead[j] = _indexHead[j - 1];
+                indexTail_[j] = indexTail_[j - 1];
             }
-            _indexHead[i] = e;
+            indexTail_[i] = e;
 
-            upper = _indexTail[0 .. e].map!(a => _tail[a]).assumeSorted.lowerBound(_tail[e] + 1).length;
-            lower = _indexTail[0 .. upper].map!(a => _tail[a]).assumeSorted.lowerBound(_tail[e]).length;
-            i = lower + _indexTail[lower .. upper].map!(a => _head[a]).assumeSorted.lowerBound(_head[e]).length;
+            upper = indexHead_[0 .. e].map!(a => head_[a]).assumeSorted.lowerBound(head_[e] + 1).length;
+            lower = indexHead_[0 .. upper].map!(a => head_[a]).assumeSorted.lowerBound(head_[e]).length;
+            i = lower + indexHead_[lower .. upper].map!(a => tail_[a]).assumeSorted.lowerBound(tail_[e]).length;
             for (j = e; j > i; --j)
             {
-                _indexTail[j] = _indexTail[j - 1];
+                indexHead_[j] = indexHead_[j - 1];
             }
-            _indexTail[i] = e;
+            indexHead_[i] = e;
         }
-        assert(_indexHead.length == _indexTail.length);
-        assert(_indexHead.length == _head.length, format("%s head indices but %s head values.", _indexHead.length, _head.length));
-        assert(_indexTail.length == _tail.length, format("%s tail indices but %s tail values.", _indexTail.length, _tail.length));
+        assert(indexTail_.length == indexHead_.length);
+        assert(indexTail_.length == tail_.length, format("%s tail indices but %s tail values.", indexTail_.length, tail_.length));
+        assert(indexHead_.length == head_.length, format("%s head indices but %s head values.", indexHead_.length, head_.length));
     }
 
     void indexEdgesSort()
     {
-        _indexHead ~= iota(_indexHead.length, _head.length).array;
-        _indexTail ~= iota(_indexTail.length, _tail.length).array;
-        assert(_indexHead.length == _indexTail.length);
-        _indexHead.multiSort!((a, b) => _head[a] < _head[b], (a, b) => _tail[a] < _tail[b]);
-        _indexTail.multiSort!((a, b) => _tail[a] < _tail[b], (a, b) => _head[a] < _head[b]);
+        indexTail_ ~= iota(indexTail_.length, tail_.length).array;
+        indexHead_ ~= iota(indexHead_.length, head_.length).array;
+        assert(indexTail_.length == indexHead_.length);
+        indexTail_.multiSort!((a, b) => tail_[a] < tail_[b], (a, b) => head_[a] < head_[b]);
+        indexHead_.multiSort!((a, b) => head_[a] < head_[b], (a, b) => tail_[a] < tail_[b]);
     }
 
     void sumEdges(ref size_t[] sum, in size_t[] vertex, in size_t[] index) @safe const nothrow pure
@@ -203,55 +204,55 @@ final class IndexedEdgeList(bool dir)
   public:
     /**
      * Add new edges to the graph.  These may be provided either singly, by
-     * passing an individual (head, tail) pair, or en masse by passing an array
-     * whose entries are [head1, tail1, head2, tail2, ...].  Duplicate edges
+     * passing an individual (tail, head) pair, or en masse by passing an array
+     * whose entries are [tail1, head1, tail2, head2, ...].  Duplicate edges
      * are permitted.
      */
-    void addEdge()(size_t head, size_t tail)
+    void addEdge()(size_t tail, size_t head)
     {
-        enforce(head < vertexCount, format("Edge head %s is greater than largest vertex ID %s", head, vertexCount - 1));
         enforce(tail < vertexCount, format("Edge tail %s is greater than largest vertex ID %s", tail, vertexCount - 1));
+        enforce(head < vertexCount, format("Edge head %s is greater than largest vertex ID %s", head, vertexCount - 1));
         static if (!directed)
         {
-            if (tail < head)
+            if (head < tail)
             {
-                swap(head, tail);
+                swap(tail, head);
             }
         }
-        _head ~= head;
-        _tail ~= tail;
+        tail_ ~= tail;
+        head_ ~= head;
         indexEdgesInsertion();
-        ++_sumHead[head + 1 .. $];
-        ++_sumTail[tail + 1 .. $];
+        ++sumTail_[tail + 1 .. $];
+        ++sumHead_[head + 1 .. $];
     }
 
     /// ditto
     void addEdge(T : size_t)(T[] edgeList)
     {
         enforce(edgeList.length % 2 == 0);
-        assert(_head.length == _tail.length);
-        immutable size_t l = _head.length;
-        _head.length += edgeList.length / 2;
-        _tail.length += edgeList.length / 2;
+        assert(tail_.length == head_.length);
+        immutable size_t l = tail_.length;
+        tail_.length += edgeList.length / 2;
+        head_.length += edgeList.length / 2;
         foreach (immutable i; 0 .. edgeList.length / 2)
         {
-            size_t head = edgeList[2 * i];
-            size_t tail = edgeList[2 * i + 1];
-            enforce(head < vertexCount, format("Edge head %s is greater than largest vertex ID %s", head, vertexCount - 1));
-            enforce(tail < vertexCount, format("Edge tail %s is greater than vertex count %s", tail, vertexCount - 1));
+            size_t tail = edgeList[2 * i];
+            size_t head = edgeList[2 * i + 1];
+            enforce(tail < vertexCount, format("Edge tail %s is greater than largest vertex ID %s", tail, vertexCount - 1));
+            enforce(head < vertexCount, format("Edge head %s is greater than vertex count %s", head, vertexCount - 1));
             static if (!directed)
             {
-                if (tail < head)
+                if (head < tail)
                 {
-                    swap(head, tail);
+                    swap(tail, head);
                 }
             }
-            _head[l + i] = head;
-            _tail[l + i] = tail;
+            tail_[l + i] = tail;
+            head_[l + i] = head;
         }
         indexEdgesSort();
-        sumEdges(_sumHead, _head, _indexHead);
-        sumEdges(_sumTail, _tail, _indexTail);
+        sumEdges(sumTail_, tail_, indexTail_);
+        sumEdges(sumHead_, head_, indexHead_);
     }
 
     static if (directed)
@@ -265,16 +266,16 @@ final class IndexedEdgeList(bool dir)
         size_t degreeIn(in size_t v) @safe const pure
         {
             enforce(isVertex(v));
-            assert(v + 1 < _sumTail.length);
-            return _sumTail[v + 1] - _sumTail[v];
+            assert(v + 1 < sumHead_.length);
+            return sumHead_[v + 1] - sumHead_[v];
         }
 
         ///ditto
         size_t degreeOut(in size_t v) @safe const pure
         {
             enforce(isVertex(v));
-            assert(v + 1 < _sumHead.length);
-            return _sumHead[v + 1] - _sumHead[v];
+            assert(v + 1 < sumTail_.length);
+            return sumTail_[v + 1] - sumTail_[v];
         }
     }
     else
@@ -283,10 +284,10 @@ final class IndexedEdgeList(bool dir)
         size_t degree(in size_t v) @safe const pure
         {
             enforce(isVertex(v));
-            assert(v + 1 < _sumHead.length);
-            assert(_sumHead.length == _sumTail.length);
-            return (_sumHead[v + 1] - _sumHead[v])
-                 + (_sumTail[v + 1] - _sumTail[v]);
+            assert(v + 1 < sumTail_.length);
+            assert(sumTail_.length == sumHead_.length);
+            return (sumTail_[v + 1] - sumTail_[v])
+                 + (sumHead_[v + 1] - sumHead_[v]);
         }
 
         alias degreeIn = degree;
@@ -301,98 +302,98 @@ final class IndexedEdgeList(bool dir)
 
     /**
      * Returns a list of all edges in the graph in the form of a list of
-     * (head, tail) vertex pairs.
+     * (tail, head) vertex pairs.
      */
     auto edge() @property @safe const nothrow pure
     {
-        return zip(_head, _tail);
+        return zip(tail_, head_);
     }
 
     /// Total number of edges in the graph.
     size_t edgeCount() @property @safe const nothrow pure
     {
-        assert(_head.length == _tail.length);
-        return _head.length;
+        assert(tail_.length == head_.length);
+        return tail_.length;
     }
 
     /**
-     * Returns the edge index for a given (head, tail) vertex pair.  If
-     * (head, tail) is not an edge, will throw an exception.
+     * Returns the edge index for a given (tail, head) vertex pair.  If
+     * (tail, head) is not an edge, will throw an exception.
      */
-    size_t edgeID(size_t head, size_t tail) const
+    size_t edgeID(size_t tail, size_t head) const
     {
-        if (!isVertex(head))
-        {
-            throw new Exception(format("No vertex with ID %s", head));
-        }
-
         if (!isVertex(tail))
         {
             throw new Exception(format("No vertex with ID %s", tail));
         }
 
+        if (!isVertex(head))
+        {
+            throw new Exception(format("No vertex with ID %s", head));
+        }
+
         static if (!directed)
         {
-            if (tail < head)
+            if (head < tail)
             {
-                swap(head, tail);
+                swap(tail, head);
             }
         }
 
-        size_t headDeg = _sumHead[head + 1] - _sumHead[head];
-        size_t tailDeg = _sumTail[tail + 1] - _sumTail[tail];
-
-        if (headDeg == 0)
-        {
-            static if (directed)
-            {
-                assert(degreeOut(head) == 0);
-                throw new Exception(format("Vertex %s has no outgoing neighbours.", head));
-            }
-            else
-            {
-                throw new Exception(format("(%s, %s) is not an edge", head, tail));
-            }
-        }
+        size_t tailDeg = sumTail_[tail + 1] - sumTail_[tail];
+        size_t headDeg = sumHead_[head + 1] - sumHead_[head];
 
         if (tailDeg == 0)
         {
             static if (directed)
             {
-                assert(degreeIn(tail) == 0);
-                throw new Exception(format("Vertex %s has no incoming neighbours.", tail));
+                assert(degreeOut(tail) == 0);
+                throw new Exception(format("Vertex %s has no outgoing neighbours.", tail));
             }
             else
             {
-                throw new Exception(format("(%s, %s) is not an edge", head, tail));
+                throw new Exception(format("(%s, %s) is not an edge", tail, head));
             }
         }
 
-        if (headDeg < tailDeg)
+        if (headDeg == 0)
         {
-            // search among the tails of head
-            foreach (immutable i; iota(_sumHead[head], _sumHead[head + 1]).map!(a => _indexHead[a]))
+            static if (directed)
             {
-                if (_tail[i] == tail)
+                assert(degreeIn(head) == 0);
+                throw new Exception(format("Vertex %s has no incoming neighbours.", head));
+            }
+            else
+            {
+                throw new Exception(format("(%s, %s) is not an edge", tail, head));
+            }
+        }
+
+        if (tailDeg < headDeg)
+        {
+            // search among the heads of tail
+            foreach (immutable i; iota(sumTail_[tail], sumTail_[tail + 1]).map!(a => indexTail_[a]))
+            {
+                if (head_[i] == head)
                 {
-                    assert(_head[i] == head);
+                    assert(tail_[i] == tail);
                     return i;
                 }
             }
-            throw new Exception(format("(%s, %s) is not an edge.", head, tail));
+            throw new Exception(format("(%s, %s) is not an edge.", tail, head));
         }
         else
         {
-            // search among the heads of tail
-            foreach (immutable i; iota(_sumTail[tail], _sumTail[tail + 1]).map!(a => _indexTail[a]))
+            // search among the tails of head
+            foreach (immutable i; iota(sumHead_[head], sumHead_[head + 1]).map!(a => indexHead_[a]))
             {
-                if (_head[i] == head)
+                if (tail_[i] == tail)
                 {
-                    assert(_tail[i] == tail);
+                    assert(head_[i] == head);
                     return i;
                 }
             }
-            throw new Exception(format("(%s, %s) is not an edge.", head, tail));
+            throw new Exception(format("(%s, %s) is not an edge.", tail, head));
         }
     }
 
@@ -406,14 +407,14 @@ final class IndexedEdgeList(bool dir)
         auto incidentEdgesIn(in size_t v) const
         {
             enforce(isVertex(v));
-            return iota(_sumTail[v], _sumTail[v + 1]).map!(a => _indexTail[a]);
+            return iota(sumHead_[v], sumHead_[v + 1]).map!(a => indexHead_[a]);
         }
 
         /// ditto
         auto incidentEdgesOut(in size_t v) const
         {
             enforce(isVertex(v));
-            return iota(_sumHead[v], _sumHead[v + 1]).map!(a => _indexHead[a]);
+            return iota(sumTail_[v], sumTail_[v + 1]).map!(a => indexTail_[a]);
         }
     }
     else
@@ -422,8 +423,8 @@ final class IndexedEdgeList(bool dir)
         auto incidentEdges(in size_t v) const
         {
             enforce(isVertex(v));
-            return chain(iota(_sumTail[v], _sumTail[v + 1]).map!(a => _indexTail[a]),
-                         iota(_sumHead[v], _sumHead[v + 1]).map!(a => _indexHead[a]));
+            return chain(iota(sumHead_[v], sumHead_[v + 1]).map!(a => indexHead_[a]),
+                         iota(sumTail_[v], sumTail_[v + 1]).map!(a => indexTail_[a]));
         }
 
         alias incidentEdgesIn  = incidentEdges;
@@ -431,41 +432,41 @@ final class IndexedEdgeList(bool dir)
     }
 
     /**
-     * Checks if a given (head, tail) vertex pair forms an edge in the graph.
+     * Checks if a given (tail, head) vertex pair forms an edge in the graph.
      */
-    bool isEdge(size_t head, size_t tail) const
+    bool isEdge(size_t tail, size_t head) const
     {
-        if (!(isVertex(head) && isVertex(tail)))
+        if (!(isVertex(tail) && isVertex(head)))
         {
             return false;
         }
 
         static if (!directed)
         {
-            if (tail < head)
+            if (head < tail)
             {
-                swap(head, tail);
+                swap(tail, head);
             }
         }
 
-        size_t headDeg = _sumHead[head + 1] - _sumHead[head];
-        if (headDeg == 0)
-        {
-            return false;
-        }
-
-        size_t tailDeg = _sumTail[tail + 1] - _sumTail[tail];
+        size_t tailDeg = sumTail_[tail + 1] - sumTail_[tail];
         if (tailDeg == 0)
         {
             return false;
         }
 
-        if (headDeg < tailDeg)
+        size_t headDeg = sumHead_[head + 1] - sumHead_[head];
+        if (headDeg == 0)
         {
-            // search among the tails of head
-            foreach (immutable t; iota(_sumHead[head], _sumHead[head + 1]).map!(a => _tail[_indexHead[a]]))
+            return false;
+        }
+
+        if (tailDeg < headDeg)
+        {
+            // search among the heads of tail
+            foreach (immutable t; iota(sumTail_[tail], sumTail_[tail + 1]).map!(a => head_[indexTail_[a]]))
             {
-                if (t == tail)
+                if (t == head)
                 {
                     return true;
                 }
@@ -474,10 +475,10 @@ final class IndexedEdgeList(bool dir)
         }
         else
         {
-            // search among the heads of tail
-            foreach (immutable h; iota(_sumTail[tail], _sumTail[tail + 1]).map!(a => _head[_indexTail[a]]))
+            // search among the tails of head
+            foreach (immutable h; iota(sumHead_[head], sumHead_[head + 1]).map!(a => tail_[indexHead_[a]]))
             {
-                if (h == head)
+                if (h == tail)
                 {
                     return true;
                 }
@@ -514,14 +515,14 @@ final class IndexedEdgeList(bool dir)
         auto neighboursIn(in size_t v) const
         {
             enforce(isVertex(v));
-            return iota(_sumTail[v], _sumTail[v + 1]).map!(a => _head[_indexTail[a]]);
+            return iota(sumHead_[v], sumHead_[v + 1]).map!(a => tail_[indexHead_[a]]);
         }
 
         /// ditto
         auto neighboursOut(in size_t v) const
         {
             enforce(isVertex(v));
-            return iota(_sumHead[v], _sumHead[v + 1]).map!(a => _tail[_indexHead[a]]);
+            return iota(sumTail_[v], sumTail_[v + 1]).map!(a => head_[indexTail_[a]]);
         }
     }
     else
@@ -530,8 +531,8 @@ final class IndexedEdgeList(bool dir)
         auto neighbours(in size_t v) const
         {
             enforce(isVertex(v));
-            return chain(iota(_sumTail[v], _sumTail[v + 1]).map!(a => _head[_indexTail[a]]),
-                         iota(_sumHead[v], _sumHead[v + 1]).map!(a => _tail[_indexHead[a]]));
+            return chain(iota(sumHead_[v], sumHead_[v + 1]).map!(a => tail_[indexHead_[a]]),
+                         iota(sumTail_[v], sumTail_[v + 1]).map!(a => head_[indexTail_[a]]));
         }
 
         alias neighbors = neighbours;
@@ -548,34 +549,34 @@ final class IndexedEdgeList(bool dir)
      */
     size_t vertexCount() @property @safe const nothrow pure
     {
-        assert(_sumHead.length == _sumTail.length);
-        return _sumHead.length - 1;
+        assert(sumTail_.length == sumHead_.length);
+        return sumTail_.length - 1;
     }
 
     /// ditto
     size_t vertexCount(in size_t n) @property @safe pure
     {
-        immutable size_t l = _sumHead.length;
+        immutable size_t l = sumTail_.length;
         if (n < (l - 1))
         {
             // Check that no edges are lost this way
-            if ((_sumHead[n] != _sumHead[$-1]) ||
-                (_sumTail[n] != _sumTail[$-1]))
+            if ((sumTail_[n] != sumTail_[$-1]) ||
+                (sumHead_[n] != sumHead_[$-1]))
             {
                 throw new Exception("Cannot set vertexCount value without deleting edges");
             }
             else
             {
-                _sumHead.length = n + 1;
-                _sumTail.length = n + 1;
+                sumTail_.length = n + 1;
+                sumHead_.length = n + 1;
             }
         }
         else
         {
-            _sumHead.length = n + 1;
-            _sumTail.length = n + 1;
-            _sumHead[l .. $] = _sumHead[l - 1];
-            _sumTail[l .. $] = _sumTail[l - 1];
+            sumTail_.length = n + 1;
+            sumHead_.length = n + 1;
+            sumTail_[l .. $] = sumTail_[l - 1];
+            sumHead_[l .. $] = sumHead_[l - 1];
         }
         return vertexCount;
     }
@@ -615,11 +616,11 @@ final class CachedEdgeList(bool dir)
 
     alias _graph this;
 
-    void addEdge()(size_t head, size_t tail)
+    void addEdge()(size_t tail, size_t head)
     {
-        _graph.addEdge(head, tail);
-        _neighboursCache.length = 2 * _head.length;
-        _incidentEdgesCache.length = 2 * _head.length;
+        _graph.addEdge(tail, head);
+        _neighboursCache.length = 2 * tail_.length;
+        _incidentEdgesCache.length = 2 * tail_.length;
         static if (directed)
         {
             _neighboursIn[] = null;
@@ -637,8 +638,8 @@ final class CachedEdgeList(bool dir)
     void addEdge(T : size_t)(T[] edgeList)
     {
         _graph.addEdge(edgeList);
-        _neighboursCache.length = 2 * _head.length;
-        _incidentEdgesCache.length = 2 * _head.length;
+        _neighboursCache.length = 2 * tail_.length;
+        _incidentEdgesCache.length = 2 * tail_.length;
         static if (directed)
         {
             _neighboursIn[] = null;
@@ -688,9 +689,9 @@ final class CachedEdgeList(bool dir)
         return _graph.edgeCount;
     }
 
-    size_t edgeID(size_t head, size_t tail) const
+    size_t edgeID(size_t tail, size_t head) const
     {
-        return _graph.edgeID(head, tail);
+        return _graph.edgeID(tail, head);
     }
 
     static if (directed)
@@ -699,12 +700,12 @@ final class CachedEdgeList(bool dir)
         {
             if (_incidentEdgesIn[v] is null)
             {
-                immutable size_t start = _sumTail[v] + _sumHead[v];
-                immutable size_t end = _sumHead[v] + _sumTail[v + 1];
+                immutable size_t start = sumHead_[v] + sumTail_[v];
+                immutable size_t end = sumTail_[v] + sumHead_[v + 1];
                 size_t j = start;
-                foreach (immutable i; _sumTail[v] .. _sumTail[v + 1])
+                foreach (immutable i; sumHead_[v] .. sumHead_[v + 1])
                 {
-                    _incidentEdgesCache[j] = _indexTail[i];
+                    _incidentEdgesCache[j] = indexHead_[i];
                     ++j;
                 }
                 assert(j == end);
@@ -717,12 +718,12 @@ final class CachedEdgeList(bool dir)
         {
             if (_incidentEdgesOut[v] is null)
             {
-                immutable size_t start = _sumHead[v] + _sumTail[v + 1];
-                immutable size_t end = _sumTail[v + 1] + _sumHead[v + 1];
+                immutable size_t start = sumTail_[v] + sumHead_[v + 1];
+                immutable size_t end = sumHead_[v + 1] + sumTail_[v + 1];
                 size_t j = start;
-                foreach (immutable i; _sumHead[v] .. _sumHead[v + 1])
+                foreach (immutable i; sumTail_[v] .. sumTail_[v + 1])
                 {
-                    _incidentEdgesCache[j] = _indexHead[i];
+                    _incidentEdgesCache[j] = indexTail_[i];
                     ++j;
                 }
                 assert(j == end);
@@ -737,17 +738,17 @@ final class CachedEdgeList(bool dir)
         {
             if (_incidentEdges[v] is null)
             {
-                immutable size_t start = _sumTail[v] + _sumHead[v];
-                immutable size_t end = _sumTail[v + 1] + _sumHead[v + 1];
+                immutable size_t start = sumHead_[v] + sumTail_[v];
+                immutable size_t end = sumHead_[v + 1] + sumTail_[v + 1];
                 size_t j = start;
-                foreach (immutable i; _sumTail[v] .. _sumTail[v + 1])
+                foreach (immutable i; sumHead_[v] .. sumHead_[v + 1])
                 {
-                    _incidentEdgesCache[j] = _indexTail[i];
+                    _incidentEdgesCache[j] = indexHead_[i];
                     ++j;
                 }
-                foreach (immutable i; _sumHead[v] .. _sumHead[v + 1])
+                foreach (immutable i; sumTail_[v] .. sumTail_[v + 1])
                 {
-                    _incidentEdgesCache[j] = _indexHead[i];
+                    _incidentEdgesCache[j] = indexTail_[i];
                     ++j;
                 }
                 assert(j == end);
@@ -760,9 +761,9 @@ final class CachedEdgeList(bool dir)
         alias incidentEdgesOut = incidentEdges;
     }
 
-    bool isEdge(size_t head, size_t tail) const
+    bool isEdge(size_t tail, size_t head) const
     {
-        return _graph.isEdge(head, tail);
+        return _graph.isEdge(tail, head);
     }
 
     static if (directed)
@@ -771,12 +772,12 @@ final class CachedEdgeList(bool dir)
         {
             if (_neighboursIn[v] is null)
             {
-                immutable size_t start = _sumTail[v] + _sumHead[v];
-                immutable size_t end = _sumHead[v] + _sumTail[v + 1];
+                immutable size_t start = sumHead_[v] + sumTail_[v];
+                immutable size_t end = sumTail_[v] + sumHead_[v + 1];
                 size_t j = start;
-                foreach (immutable i; _sumTail[v] .. _sumTail[v + 1])
+                foreach (immutable i; sumHead_[v] .. sumHead_[v + 1])
                 {
-                    _neighboursCache[j] = _head[_indexTail[i]];
+                    _neighboursCache[j] = tail_[indexHead_[i]];
                     ++j;
                 }
                 assert(j == end);
@@ -789,12 +790,12 @@ final class CachedEdgeList(bool dir)
         {
             if (_neighboursOut[v] is null)
             {
-                immutable size_t start = _sumHead[v] + _sumTail[v + 1];
-                immutable size_t end = _sumTail[v + 1] + _sumHead[v + 1];
+                immutable size_t start = sumTail_[v] + sumHead_[v + 1];
+                immutable size_t end = sumHead_[v + 1] + sumTail_[v + 1];
                 size_t j = start;
-                foreach (immutable i; _sumHead[v] .. _sumHead[v + 1])
+                foreach (immutable i; sumTail_[v] .. sumTail_[v + 1])
                 {
-                    _neighboursCache[j] = _tail[_indexHead[i]];
+                    _neighboursCache[j] = head_[indexTail_[i]];
                     ++j;
                 }
                 assert(j == end);
@@ -809,17 +810,17 @@ final class CachedEdgeList(bool dir)
         {
             if (_neighbours[v] is null)
             {
-                immutable size_t start = _sumTail[v] + _sumHead[v];
-                immutable size_t end = _sumTail[v + 1] + _sumHead[v + 1];
+                immutable size_t start = sumHead_[v] + sumTail_[v];
+                immutable size_t end = sumHead_[v + 1] + sumTail_[v + 1];
                 size_t j = start;
-                foreach (immutable i; _sumTail[v] .. _sumTail[v + 1])
+                foreach (immutable i; sumHead_[v] .. sumHead_[v + 1])
                 {
-                    _neighboursCache[j] = _head[_indexTail[i]];
+                    _neighboursCache[j] = tail_[indexHead_[i]];
                     ++j;
                 }
-                foreach (immutable i; _sumHead[v] .. _sumHead[v + 1])
+                foreach (immutable i; sumTail_[v] .. sumTail_[v + 1])
                 {
-                    _neighboursCache[j] = _tail[_indexHead[i]];
+                    _neighboursCache[j] = head_[indexTail_[i]];
                     ++j;
                 }
                 assert(j == end);
@@ -845,18 +846,18 @@ final class CachedEdgeList(bool dir)
     {
         static if (directed)
         {
-            assert(_sumTail.length == _neighboursIn.length + 1);
-            assert(_sumHead.length == _neighboursOut.length + 1);
-            assert(_sumTail.length == _incidentEdgesIn.length + 1);
-            assert(_sumHead.length == _incidentEdgesOut.length + 1);
+            assert(sumHead_.length == _neighboursIn.length + 1);
+            assert(sumTail_.length == _neighboursOut.length + 1);
+            assert(sumHead_.length == _incidentEdgesIn.length + 1);
+            assert(sumTail_.length == _incidentEdgesOut.length + 1);
         }
         else
         {
-            assert(_sumHead.length == _neighbours.length + 1);
-            assert(_sumTail.length == _incidentEdges.length + 1);
+            assert(sumTail_.length == _neighbours.length + 1);
+            assert(sumHead_.length == _incidentEdges.length + 1);
         }
 
-        immutable size_t l = _sumHead.length;
+        immutable size_t l = sumTail_.length;
         _graph.vertexCount = n;
 
         static if (directed)
@@ -921,37 +922,37 @@ unittest
 
             if (directed)
             {
-                assert(g1._head == [5, 5, 7, 3, 6, 3]);
-                assert(g2._head == [5, 5, 7, 3, 6, 3]);
-                assert(g1._tail == [8, 4, 4, 4, 9, 2]);
-                assert(g2._tail == [8, 4, 4, 4, 9, 2]);
+                assert(g1.tail_ == [5, 5, 7, 3, 6, 3]);
+                assert(g2.tail_ == [5, 5, 7, 3, 6, 3]);
+                assert(g1.head_ == [8, 4, 4, 4, 9, 2]);
+                assert(g2.head_ == [8, 4, 4, 4, 9, 2]);
 
-                assert(g1._indexHead == [5, 3, 1, 0, 4, 2]);
-                assert(g2._indexHead == [5, 3, 1, 0, 4, 2]);
-                assert(g1._indexTail == [5, 3, 1, 2, 0, 4]);
-                assert(g2._indexTail == [5, 3, 1, 2, 0, 4]);
+                assert(g1.indexTail_ == [5, 3, 1, 0, 4, 2]);
+                assert(g2.indexTail_ == [5, 3, 1, 0, 4, 2]);
+                assert(g1.indexHead_ == [5, 3, 1, 2, 0, 4]);
+                assert(g2.indexHead_ == [5, 3, 1, 2, 0, 4]);
 
-                assert(g1._sumHead == [0, 0, 0, 0, 2, 2, 4, 5, 6, 6, 6]);
-                assert(g2._sumHead == [0, 0, 0, 0, 2, 2, 4, 5, 6, 6, 6]);
-                assert(g1._sumTail == [0, 0, 0, 1, 1, 4, 4, 4, 4, 5, 6]);
-                assert(g2._sumTail == [0, 0, 0, 1, 1, 4, 4, 4, 4, 5, 6]);
+                assert(g1.sumTail_ == [0, 0, 0, 0, 2, 2, 4, 5, 6, 6, 6]);
+                assert(g2.sumTail_ == [0, 0, 0, 0, 2, 2, 4, 5, 6, 6, 6]);
+                assert(g1.sumHead_ == [0, 0, 0, 1, 1, 4, 4, 4, 4, 5, 6]);
+                assert(g2.sumHead_ == [0, 0, 0, 1, 1, 4, 4, 4, 4, 5, 6]);
             }
             else
             {
-                assert(g1._head == [5, 4, 4, 3, 6, 2]);
-                assert(g2._head == [5, 4, 4, 3, 6, 2]);
-                assert(g1._tail == [8, 5, 7, 4, 9, 3]);
-                assert(g2._tail == [8, 5, 7, 4, 9, 3]);
+                assert(g1.tail_ == [5, 4, 4, 3, 6, 2]);
+                assert(g2.tail_ == [5, 4, 4, 3, 6, 2]);
+                assert(g1.head_ == [8, 5, 7, 4, 9, 3]);
+                assert(g2.head_ == [8, 5, 7, 4, 9, 3]);
 
-                assert(g1._indexHead == [5, 3, 1, 2, 0, 4]);
-                assert(g2._indexHead == [5, 3, 1, 2, 0, 4]);
-                assert(g1._indexTail == [5, 3, 1, 2, 0, 4]);
-                assert(g2._indexTail == [5, 3, 1, 2, 0, 4]);
+                assert(g1.indexTail_ == [5, 3, 1, 2, 0, 4]);
+                assert(g2.indexTail_ == [5, 3, 1, 2, 0, 4]);
+                assert(g1.indexHead_ == [5, 3, 1, 2, 0, 4]);
+                assert(g2.indexHead_ == [5, 3, 1, 2, 0, 4]);
 
-                assert(g1._sumHead == [0, 0, 0, 1, 2, 4, 5, 6, 6, 6, 6]);
-                assert(g2._sumHead == [0, 0, 0, 1, 2, 4, 5, 6, 6, 6, 6]);
-                assert(g1._sumTail == [0, 0, 0, 0, 1, 2, 3, 3, 4, 5, 6]);
-                assert(g2._sumTail == [0, 0, 0, 0, 1, 2, 3, 3, 4, 5, 6]);
+                assert(g1.sumTail_ == [0, 0, 0, 1, 2, 4, 5, 6, 6, 6, 6]);
+                assert(g2.sumTail_ == [0, 0, 0, 1, 2, 4, 5, 6, 6, 6, 6]);
+                assert(g1.sumHead_ == [0, 0, 0, 0, 1, 2, 3, 3, 4, 5, 6]);
+                assert(g2.sumHead_ == [0, 0, 0, 0, 1, 2, 3, 3, 4, 5, 6]);
             }
 
             foreach (immutable v; 0 .. g1.vertexCount)
@@ -1000,8 +1001,8 @@ unittest
                         {
                             assert(g1.isEdge(h, t));
                             auto i = g1.edgeID(h, t);
-                            assert(h == g1._head[i]);
-                            assert(t == g1._tail[i]);
+                            assert(h == g1.tail_[i]);
+                            assert(t == g1.head_[i]);
                         }
                         else
                         {
@@ -1022,13 +1023,13 @@ unittest
                             auto i = g1.edgeID(h, t);
                             if (h <= t)
                             {
-                                assert(h == g1._head[i]);
-                                assert(t == g1._tail[i]);
+                                assert(h == g1.tail_[i]);
+                                assert(t == g1.head_[i]);
                             }
                             else
                             {
-                                assert(h == g1._tail[i]);
-                                assert(t == g1._head[i]);
+                                assert(h == g1.head_[i]);
+                                assert(t == g1.tail_[i]);
                             }
                         }
                         else
@@ -1043,8 +1044,8 @@ unittest
             // Another check on edge ID.
             foreach (immutable e; 0 .. g1.edgeCount)
             {
-                size_t h = g1._head[e];
-                size_t t = g1._tail[e];
+                size_t h = g1.tail_[e];
+                size_t t = g1.head_[e];
                 assert(e == g1.edgeID(h, t));
                 if (!directed)
                 {
@@ -1108,12 +1109,12 @@ unittest
             g1.vertexCount = 10;
 
             // Check that now we've re-resized it it's back to where it was.
-            assert(g1._head == g2._head);
-            assert(g1._tail == g2._tail);
-            assert(g1._indexHead == g2._indexHead);
-            assert(g1._indexTail == g2._indexTail);
-            assert(g1._sumHead == g2._sumHead);
-            assert(g1._sumTail == g2._sumTail);
+            assert(g1.tail_ == g2.tail_);
+            assert(g1.head_ == g2.head_);
+            assert(g1.indexTail_ == g2.indexTail_);
+            assert(g1.indexHead_ == g2.indexHead_);
+            assert(g1.sumTail_ == g2.sumTail_);
+            assert(g1.sumHead_ == g2.sumHead_);
         }
     }
 }
