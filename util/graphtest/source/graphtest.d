@@ -36,7 +36,7 @@ void main()
             StopWatch watch;
 
             writeln;
-            writeln("Graph type: ", (Graph.directed) ? "directed " : "undirected ", Graph.stringof);
+            writeln("Graph type: ", (Graph.directed) ? "directed " : "undirected ", __traits(identifier, Graph));
             writeln;
 
             writeln("First, a graph of 50 vertices, with edges added one at a time.");
